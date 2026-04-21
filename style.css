@@ -1,0 +1,264 @@
+:root {
+    --crema: #fcfbf4;
+    --blanco: #ffffff;
+    --negro: #000000;
+    --gris-oscuro: #333333;
+    --gris-medio: #777777;
+    --gris-claro: #e0e0e0;
+    --amarillo: #ffe371;
+    --fuente-serif: 'Times New Roman', serif;
+    --fuente-sans: 'Helvetica Neue', Arial, sans-serif;
+}
+
+body {
+    margin: 0;
+    background-color: var(--crema);
+    font-family: var(--fuente-sans);
+    color: var(--negro);
+}
+
+/* 1. Reset para el Logo */
+.logo img {
+    height: 45px; /* Controlamos la altura para que no desborde */
+    width: auto;   /* Mantiene la proporción original */
+    display: block;
+}
+
+/* 2. Limpieza de la navegación */
+.nav-links, 
+.nav-links ul {
+    list-style: none; /* Quitamos los puntitos */
+    margin: 0;
+    padding: 0;
+    display: flex;    /* Alineación horizontal */
+    align-items: center;
+    gap: 25px;        /* Espacio entre botones */
+}
+
+/* 3. Estilo de los links */
+.nav-links a {
+    text-decoration: none;
+    color: var(--negro);
+    font-family: var(--fuente-sans);
+    font-weight: 500;
+    font-size: 0.9rem;
+    text-transform: uppercase; /* Para ese look editorial */
+    transition: color 0.3s ease;
+}
+
+.nav-links a:hover {
+    color: var(--amarillo);
+}
+
+/* 4. Contenedor Principal (Navbar) */
+.navbar {
+    display: flex;
+    justify-content: space-between; /* Logo a la izquierda, Links a la derecha */
+    align-items: center;
+    padding: 15px 5%;
+    background-color: var(--blanco);
+    border-bottom: 1px solid var(--gris-claro);
+}
+
+/* 1. Contenedor Principal: La Grilla Asimétrica */
+.hero-new {
+    display: grid;
+    /* Ajustamos: la primera columna es un poco más ancha que la última, 
+       pero la del centro sigue siendo la protagonista */
+    grid-template-columns: 30% 45% 25%; 
+    gap: 30px;
+    padding: 40px 5%;
+    align-items: end; /* Esto es clave para que "descansen" sobre el mismo nivel */
+}
+
+/* 2. Configuración General de Imágenes */
+/* Configuración universal para todas las imágenes dentro del Hero */
+.hero-new img {
+    width: 100%;       /* Ocupa todo el ancho de la columna */
+    height: 100%;      /* Intenta ocupar todo el alto disponible (si lo hay) */
+    display: block;    /* Quita espacios extra abajo */
+    object-fit: cover; /* Recorta la imagen para que llene el espacio sin estirarse */
+}
+
+.hero-img-large img {
+    width: 100%;
+    aspect-ratio: 2 / 3; /* Esto la hace más alta que ancha */
+    object-fit: cover;
+} 
+
+/* 3. Columna Central (Título + Imagen Horizontal) */
+.hero-center {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.text-top {
+    text-align: left;
+}
+/* 1. Estilo para "NEW DROP" (Sans-Serif) */
+.hero-subtitle {
+    font-family: var(--fuente-sans); /* Forzamos Sans-Serif */
+    font-size: 0.8rem;
+    letter-spacing: 0.2rem; /* Espaciado clave para el look "premium" */
+    text-transform: uppercase;
+    color: var(--gris-oscuro);
+    margin-bottom: 8px;
+    display: block;
+}
+
+/* 2. Estilo para "THE METROPOLITAN CAPSULE" (Serif) */
+.hero-title {
+    font-family: var(--fuente-serif); /* FORZAMOS SERIF aquí */
+    font-size: clamp(2rem, 4vw, 4rem); /* Tamaño dinámico que se adapta */
+    line-height: 1; /* Para que las líneas estén bien juntas */
+    text-transform: uppercase;
+    color: var(--negro);
+    margin: 0 0 50px 0; /* Espacio abajo antes de la imagen */
+    font-weight: 400; /* Normalmente Serif no necesita estar en Negrita */
+}
+
+/* 4. Columna Derecha (Imagen Pequeña + Texto + Botón) */
+.hero-right {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end; /* Mantiene el bloque de texto y botón abajo */
+    padding-bottom: 40px;
+}
+
+.hero-right img {
+    width: 85%;          /* Achicamos la imagen al 85% de su columna */
+    align-self: flex-start; /* La empuja hacia la derecha del contenedor */
+    height: auto;
+    object-fit: cover;
+}
+
+.text-bottom p {
+    font-family: var(--fuente-sans);
+    font-size: 1.25rem; /* Un poco más chico que el estándar */
+    font-weight: 300;  /* Más fino para un look sofisticado */
+    line-height: 1.5;  /* Espaciado entre líneas para que respire */
+    color: var(--negro);
+    margin-bottom: 20px;
+}
+
+/* 5. El Botón con Interacción Amarilla */
+.btn-black {
+    display: inline-block;
+    background-color: var(--gris-medio);
+    color: var(--blanco);
+    padding: 16px 40px;
+    text-decoration: none;
+    font-family: var(--fuente-sans);
+    font-weight: bold;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    text-align: center;
+    transition: all 0.3s ease;
+    border: none;
+}
+
+.btn-black:hover {
+    background-color: var(--amarillo);
+    color: var(--negro);
+    transform: translateY(-2px); /* Pequeño salto al pasar el mouse */
+}
+
+/* 1. Contenedor Principal del Footer */
+.main-footer {
+    background-color: var(--gris-oscuro); /* Fondo oscuro */
+    color: var(--blanco);          /* Texto claro */
+    padding: 60px 5% 20px 5%;
+    font-family: var(--fuente-sans);
+}
+
+/* 2. Distribución de las Columnas */
+.footer-container {
+    display: flex;
+    justify-content: space-between;
+    gap: 40px;
+    margin-bottom: 40px;
+}
+
+.footer-col {
+    flex: 1; /* Hace que todas las columnas intenten ocupar el mismo espacio */
+}
+
+/* 3. Estilos de contenido */
+.footer-logo {
+    height: 30px;
+    filter: brightness(0) invert(1); /* Convierte el logo negro a blanco */
+    margin-bottom: 20px;
+}
+
+.footer-col h4 {
+    font-size: 0.9rem;
+    letter-spacing: 1px;
+    margin-bottom: 20px;
+    color: var(--gris-claro);
+}
+
+.footer-col ul {
+    list-style: none;
+    padding: 0;
+}
+
+.footer-col ul li {
+    margin-bottom: 10px;
+}
+
+.footer-col a {
+    color: var(--gris-medio);
+    text-decoration: none;
+    font-size: 0.85rem;
+    transition: color 0.3s;
+}
+
+.footer-col a:hover {
+    color: var(--blanco);
+}
+
+/* 4. Línea final de Copyright */
+.footer-bottom {
+    border-top: 1px solid var(--gris-oscuro);
+    padding-top: 20px;
+    text-align: left;
+    font-size: 0.75rem;
+    color: var(--gris-medio);
+}
+
+/* Este es el contenedor que encierra a ambos */
+.newsletter-wrapper {
+    display: flex;
+    border: 1px solid var(--gris-claro);
+    padding: 5px;
+    background-color: transparent;
+    max-width: 400px;
+    /* Transición suave para cualquier cambio en el contenedor */
+    transition: all 0.3s ease; 
+    cursor: pointer;
+}
+
+.newsletter-wrapper:hover {
+    /* El efecto de levantarse que usamos en el botón */
+    transform: translateY(-5px); 
+    /* Opcional: resaltar el borde al pasar el mouse */
+    border-color: var(--gris-claro); 
+}
+
+/* Cuando pases el mouse por el wrapper, el botón cambia a amarillo */
+.newsletter-wrapper:hover .btn-black {
+    background-color: var(--amarillo);
+    color: var(--negro);
+}
+
+/* El campo donde escriben el mail */
+.newsletter-input {
+    background: transparent;
+    border: none; /* Quitamos su borde individual */
+    color: var(--blanco);
+    padding: 10px;
+    flex-grow: 1; /* Esto hace que ocupe el espacio restante */
+    outline: none; /* Evita que aparezca un borde al hacer clic */
+}
