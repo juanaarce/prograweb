@@ -18,7 +18,7 @@ body {
 }
 
 header {
-    position: sticky;
+    position: sticky !important;
     top: 0;
     z-index: 1000; /* Esto asegura que el header siempre esté por encima de las imágenes */
     background-color: white; /* O el color de fondo de tu marca para que no sea transparente al bajar */
@@ -173,6 +173,27 @@ header {
     transform: translateY(-2px); /* Pequeño salto al pasar el mouse */
 }
 
+.ver-novedades {
+    display: inline-block;
+    background-color: var(--gris-medio);
+    color: var(--blanco);
+    padding: 16px 40px;
+    text-decoration: none;
+    font-family: var(--fuente-sans);
+    font-weight: bold;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    text-align: center;
+    transition: all 0.3s ease;
+    border: none;
+}
+
+.ver-novedades:hover {background-color: var(--amarillo);
+    color: var(--negro);
+    transform: translateY(-2px); /* Pequeño salto al pasar el mouse */
+}
+
 /* 1. Contenedor Principal del Footer */
 .main-footer {
     background-color: var(--gris-oscuro); /* Fondo oscuro */
@@ -271,3 +292,474 @@ header {
     outline: none; /* Evita que aparezca un borde al hacer clic */
 }
 
+/* --- CONTENEDOR DEL PRODUCTO --- */
+.products-container {
+    display: grid !important;
+    /* En PC: 4 columnas iguales */
+    grid-template-columns: repeat(4, 1fr) !important; 
+    gap: 40px 20px !important; /* Espacio entre filas y columnas */
+    width: 100% !important;
+    max-width: 1200px !important; /* Para que no se estire infinito en pantallas pro */
+    margin: 0 auto !important;
+    padding: 0 20px !important;
+}
+
+.grid-title {
+    text-align: center !important;
+    width: 100% !important;
+    margin-bottom: 50px !important;
+    text-transform: uppercase;
+    letter-spacing: 3px; /* Estilo de lujo */
+}
+/* 2. LA TARJETA (Cada columna) */
+.product-card {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    width: 100% !important; /* Ocupa el ancho de su columna del grid */
+}
+
+/* --- LA IMAGEN --- */
+.product-image img {
+    width: 100% !important;
+    /* Forzamos una altura fija igual para todas */
+    aspect-ratio: 3 / 4 !important; /* Proporción clásica de moda (vertical) */
+    
+    /* Esta es la propiedad mágica: */
+    object-fit: cover !important; 
+    /* "cover" hace que la imagen se recorte para llenar el espacio sin deformarse */
+    
+    display: block !important;
+    background-color: #f9f9f9; /* Color de fondo suave por si la foto tarda en cargar */
+}
+
+.product-image img {
+    width: 100% !important;
+    display: block !important;
+    object-fit: cover !important;
+}
+
+/* --- INFO Y BOTÓN --- */
+.product-info {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    gap: 12px !important; /* Espacio uniforme entre nombre, precio y botón */
+    width: 100% !important;
+}
+
+.product-name {
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    letter-spacing: 1px !important;
+    margin: 15px !important;
+    text-transform: uppercase !important;
+}
+
+.product-price {
+    font-size: 12px !important;
+    color: #666 !important;
+    margin: 0 !important;
+}
+
+/* --- EL BOTÓN (ESTILO MINIMALISTA) --- */
+.quick-add {
+    margin-top: 1px !important; /* Espacio extra arriba del botón */
+    margin-bottom: 30px !important;
+    background: none !important;
+    border: none !important;
+    border-bottom: 1px solid #1a1a1a !important; /* Solo una línea abajo */
+    color: #1a1a1a !important;
+    padding: 8px 0 !important;
+    font-size: 10px !important;
+    font-weight: 600 !important;
+    letter-spacing: 2px !important;
+    text-transform: uppercase !important;
+    cursor: pointer !important;
+    transition: all 0.3s ease !important;
+}
+
+.quick-add:hover {
+    color: #888 !important;
+    border-bottom-color: #888 !important;
+    letter-spacing: 3px !important;
+}
+
+/* CONTENEDOR PRINCIPAL */
+.products-container {
+    display: grid !important;
+    grid-template-columns: repeat(4, 1fr) !important; /* 4 columnas fijas */
+    gap: 60px 20px !important; /* Más espacio entre filas */
+    padding: 40px 20px !important;
+    align-items: start !important; /* Alinea todo al techo de la fila */
+}
+
+/* LA CAJA DE LA IMAGEN */
+.product-image {
+    width: 100% !important;
+    aspect-ratio: 3 / 4 !important; /* Proporción vertical de catálogo */
+    overflow: hidden !important;
+    margin-bottom: 15px !important;
+}
+
+.product-image img {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important; /* Recorta la imagen para que llene el espacio sin deformarse */
+    display: block !important;
+}
+
+/* INFO DEL PRODUCTO */
+.product-info {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    text-align: center !important;
+    min-height: 120px !important; /* Altura mínima para que los botones queden alineados */
+    justify-content: space-between !important;
+}
+
+.product-name {
+    font-size: 11px !important;
+    letter-spacing: 1.5px !important;
+    margin-bottom: 5px !important;
+    height: 30px !important; /* Espacio fijo para el nombre */
+}
+
+.product-price {
+    font-size: 11px !important;
+    margin-bottom: 15px !important;
+}
+
+/* =========================================
+   PÁGINA DE DETALLE DE PRODUCTO (PDP)
+   ========================================= */
+
+/* 1. Contenedor Principal con Aire */
+.product-page {
+    padding-top: 140px; /* Espacio generoso para el header fijo */
+    padding-bottom: 80px;
+    background-color: #fdfcf9; /* El mismo beige suave del inicio */
+}
+
+.product-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    gap: 60px; /* Espacio entre foto y texto */
+    padding: 0 20px;
+    align-items: flex-start; /* Alinea el texto al techo de la foto */
+}
+
+/* 2. Sección de Imagen (Izquierda) al 60% */
+.product-gallery {
+    flex: 1.5; /* Ocupa más espacio */
+    position: sticky; /* Se queda quieta si el texto es largo al hacer scroll */
+    top: 140px;
+}
+
+.product-gallery img {
+    width: 100%;
+    height: auto;
+    object-fit: cover;
+    /* Evitamos que se vea borrosa si la foto original es grande */
+    image-rendering: -webkit-optimize-contrast; 
+    image-rendering: crisp-edges;
+    display: block;
+}
+
+/* 3. Sección de Info (Derecha) al 40% */
+.product-details {
+    flex: 1; /* Ocupa menos espacio */
+    display: flex;
+    flex-direction: column;
+    text-align: left; /* Todo alineado a la izquierda */
+}
+
+/* Breadcrumb (Shop / Producto) */
+.breadcrumb {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: #888;
+    margin-bottom: 20px;
+}
+
+.breadcrumb a {
+    text-decoration: none;
+    color: inherit;
+}
+
+/* Título y Precio */
+.product-title {
+    font-size: 28px !important; /* Más grande y elegante */
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin: 0 0 10px 0;
+    line-height: 1.2;
+}
+
+.product-price {
+    font-size: 18px !important;
+    font-weight: 500;
+    color: #333;
+    margin: 0 0 30px 0;
+}
+
+/* Descripción */
+.product-description-container {
+    border-top: 1px solid #eee;
+    border-bottom: 1px solid #eee;
+    padding: 25px 0;
+    margin-bottom: 30px;
+}
+
+.product-description {
+    font-size: 14px;
+    line-height: 1.8;
+    color: #555;
+    margin: 0;
+}
+
+/* 4. Selector de Talles (Crucial para la estética) */
+.size-selector {
+    margin-bottom: 30px;
+}
+
+.selector-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    margin-bottom: 15px;
+    color: #000;
+}
+
+.size-options {
+    display: flex;
+    gap: 12px;
+}
+
+.size-btn {
+    border: 1px solid #e0e0e0;
+    background-color: #fff;
+    color: #000;
+    width: 45px;
+    height: 45px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+}
+
+.size-btn:hover {
+    border-color: #000;
+}
+
+.size-btn.active {
+    background-color: #000;
+    color: #fff;
+    border-color: #000;
+}
+
+/* 5. Botón Agregar al Carrito (Grande y Negro) */
+.add-to-cart-big {
+    background-color: #000;
+    color: #fff;
+    border: 1px solid #000;
+    width: 100%;
+    padding: 18px;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    margin-bottom: 30px;
+}
+
+.add-to-cart-big:hover {
+    background-color: #333;
+}
+
+/* Info Extra (Checkmarks) */
+.product-extra-info {
+    font-size: 12px;
+    color: #666;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* --- RESPONSIVE MOBILE --- */
+@media (max-width: 768px) {
+    .product-container {
+        flex-direction: column; /* Foto arriba, texto abajo */
+        gap: 30px;
+    }
+
+    .product-gallery {
+        position: relative;
+        top: 0;
+    }
+
+    .product-title {
+        font-size: 22px !important;
+    }
+}
+
+@media (max-width: 768px) {
+    /* 1. Reset del Body para que no haya scroll lateral */
+    header, .header {
+        position: fixed !important; /* En mobile, fixed suele ser más estable que sticky */
+        top: 0 !important;
+        left: 0 !important;
+        width: 100% !important;
+        z-index: 9999 !important;
+        background-color: #f4f4ed !important;
+        height: auto !important; /* Para que no ocupe de más */
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+
+    body {
+        background-color: var(--crema) !important; /* Quitamos el rosa */
+        overflow-x: hidden;
+    }
+
+    main, .hero-new {
+        margin-top: 10px; /* Ajustá este número si ves que el header tapa el inicio */
+    }
+
+
+    /* 2. El Navbar: Centramos todo y permitimos que los links bajen */
+    .navbar {
+        flex-direction: column !important;
+        height: auto !important;
+    }
+    .navbar ul {
+        flex-wrap: wrap !important;
+        justify-content: center !important;
+        gap: 10px !important;
+    }
+
+/* 1. RESET GLOBAL PARA MOBILE */
+    html, body {
+        overflow-x: hidden; /* Prohibido el scroll lateral */
+        width: 100%;
+        margin: 0;
+        padding: 0;
+    }
+
+/* Reseteamos el contenedor principal */
+    .hero-new {
+        display: flex !important;
+        flex-direction: column !important;
+        grid-template-columns: none !important;
+        height: auto !important;
+        padding: 0 !important;
+        gap: 0 !important; /* Quitamos gaps que puedan empujar cosas */
+    }
+
+    /* Forzamos a que TODAS las columnas se centren */
+    .hero-img-large, .hero-center, .hero-right {
+        width: 100% !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important; /* CENTRADO HORIZONTAL */
+        justify-content: center !important;
+        text-align: center !important;
+        margin: 20px 0 !important;
+    }
+
+    /* Las imágenes: Ni muy grandes ni tiradas a un lado */
+    .hero-new img {
+        width: 90% !important; /* Que respire a los costados */
+        max-width: 400px !important;
+        height: auto !important;
+        margin: 0 auto !important; /* CENTRADO FÍSICO */
+        display: block !important;
+    }
+
+    /* El texto y el botón de novedades */
+    .hero-center h1, .ver-novedades {
+        position: static !important;
+        transform: none !important;
+        margin: 15px auto !important;
+    }
+
+    .products-container {
+        /* En celular: 2 columnas iguales (Estilo Alo Yoga) */
+        grid-template-columns: repeat(2, 1fr) !important; 
+        gap: 30px 15px !important;
+    }
+    
+    .product-name {
+        font-size: 11px !important; /* Texto más chico en celu para que no se amontone */
+    }
+
+    .grid-title {
+        font-size: 1.2rem;
+        margin-bottom: 25px;
+    }
+
+/* 4. FOOTER: Arreglo de ancho */
+    .main-footer {
+        width: 100% !important;
+        height: auto !important;
+        padding: 40px 20px !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        text-align: center !important;
+        margin: 0 !important;
+        box-sizing: border-box !important; /* Clave para que el padding no lo ensanche */
+    }
+
+    .footer-content, .footer-container {
+        width: 100% !important;
+        max-width: 100% !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+    }
+
+
+    /* Botón de Newsletter y inputs prolijos */
+    .newsletter input, .newsletter button {
+        width: 100% !important;
+        max-width: 280px !important;
+        margin: 5px auto !important;
+    }
+    .shop-title {
+        font-size: 20px !important;
+        margin-top: 80px !important;
+    }
+
+    /* 2. Cambiamos la grilla a 2 columnas */
+    .products-container {
+        grid-template-columns: repeat(2, 1fr) !important; /* Pasamos de 4 a 2 */
+        gap: 30px 15px !important; /* Espacio más compacto para el celu */
+        padding: 20px 10px !important;
+    }
+
+    /* 3. Ajustamos el texto y botones para que entren bien */
+    .product-name {
+        font-size: 10px !important;
+        height: auto !important;
+        margin-bottom: 5px !important;
+    }
+
+    .product-price {
+        font-size: 10px !important;
+    }
+
+    .quick-add {
+        font-size: 9px !important;
+        padding: 8px 5px !important;
+        width: 100% !important;
+    }
+}
