@@ -1,6 +1,6 @@
 :root {
-    --crema: #fcfbf4;
-    --blanco: #ffffff;
+    --crema: #edead8;
+    --blanco: #fff8ec;
     --negro: #000000;
     --gris-oscuro: #333333;
     --gris-medio: #777777;
@@ -15,6 +15,14 @@ body {
     background-color: var(--crema);
     font-family: var(--fuente-sans);
     color: var(--negro);
+}
+
+header {
+    position: sticky;
+    top: 0;
+    z-index: 1000; /* Esto asegura que el header siempre esté por encima de las imágenes */
+    background-color: white; /* O el color de fondo de tu marca para que no sea transparente al bajar */
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05); /* Opcional: una sombra sutil para dar profundidad */
 }
 
 /* 1. Reset para el Logo */
@@ -262,3 +270,4 @@ body {
     flex-grow: 1; /* Esto hace que ocupe el espacio restante */
     outline: none; /* Evita que aparezca un borde al hacer clic */
 }
+
