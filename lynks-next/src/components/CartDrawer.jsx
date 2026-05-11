@@ -1,5 +1,6 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import { useCart } from '@/context/CartContext';
 
 /**
@@ -9,6 +10,7 @@ import { useCart } from '@/context/CartContext';
  * Se desliza con la clase .open (definida en globals.css).
  */
 export default function CartDrawer() {
+  const router = useRouter();
   const {
     carrito,
     total,
@@ -17,6 +19,12 @@ export default function CartDrawer() {
     cerrarCarrito,
     eliminarDelCarrito,
   } = useCart();
+
+  const irAlCheckout = () => {
+    if (!isMounted || carrito.length === 0) return;
+    cerrarCarrito();
+    router.push('/checkout');
+  };
 
   // Antes del montaje en el cliente, mostramos el carrito como vacío
   // para que el HTML del servidor coincida con la primera pintura del cliente
@@ -108,7 +116,13 @@ export default function CartDrawer() {
             <span>TOTAL:</span>
             <span id="cart-total-amount">{totalFormateado}</span>
           </div>
-          <button className="checkout-btn">FINALIZAR COMPRA</button>
+          <button
+            className="checkout-btn"
+            onClick={irAlCheckout}
+            disabled={!isMounted || carrito.length === 0}
+          >
+            FINALIZAR COMPRA
+          </button>
         </div>
       </aside>
     </>

@@ -1,3 +1,5 @@
+@import "tailwindcss";
+
 :root {
     --crema: #edead8;
     --blanco: #fff8ec;

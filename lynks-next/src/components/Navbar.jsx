@@ -29,6 +29,7 @@ export default function Navbar() {
               <Link href="/shop/tops">TOPS</Link>
               <Link href="/shop/bottoms">BOTTOMS</Link>
               <Link href="/shop/gorros">GORROS</Link>
+              <Link href="/login">MI CUENTA</Link>
               <a
                 href="#"
                 className="carrito-link"
