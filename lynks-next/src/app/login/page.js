@@ -85,17 +85,9 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center px-4 py-12 bg-[var(--crema)]">
       <div className="w-full max-w-md">
-        {/* Logo / marca */}
+        {/* Subtítulo de bienvenida */}
         <div className="mb-10 text-center">
-          <Link href="/" className="inline-block">
-            <h1
-              className="text-3xl tracking-[0.4em] font-normal text-black"
-              style={{ fontFamily: "'Times New Roman', serif" }}
-            >
-              LYNKS
-            </h1>
-          </Link>
-          <p className="mt-3 text-[11px] tracking-[0.25em] uppercase text-[var(--gris-medio)]">
+          <p className="text-[11px] tracking-[0.25em] uppercase text-[var(--gris-medio)]">
             Bienvenida de nuevo
           </p>
         </div>
