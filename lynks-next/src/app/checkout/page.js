@@ -68,6 +68,149 @@ const parsePrecio = (s) => {
   return Number.isFinite(num) ? num : 0;
 };
 
+// ---- Helpers de UI (constantes a nivel de módulo) ----
+// IMPORTANTE: estas funciones y el componente AddressForm viven fuera
+// de CheckoutPage. Si los definís adentro, React los recrea en cada render
+// y los inputs pierden el foco después de cada tecla.
+const labelClass =
+  'block text-[11px] font-semibold tracking-[0.15em] uppercase mb-2 text-black';
+
+const inputClass = (hasError) =>
+  `w-full bg-white border px-4 py-3 text-sm outline-none transition placeholder:text-gray-400 focus:border-black ${
+    hasError ? 'border-red-400' : 'border-[var(--gris-claro)]'
+  }`;
+
+function FieldError({ msg }) {
+  if (!msg) return null;
+  return <p className="mt-1 text-[11px] tracking-wide text-red-600">{msg}</p>;
+}
+
+function AddressForm({ target, value, errors, onChange }) {
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+      <div>
+        <label className={labelClass} htmlFor={`${target}-nombre`}>Nombre</label>
+        <input
+          id={`${target}-nombre`}
+          data-field={`${target}.nombre`}
+          type="text"
+          autoComplete="given-name"
+          value={value.nombre}
+          onChange={(e) => onChange('nombre', e.target.value)}
+          className={inputClass(Boolean(errors[`${target}.nombre`]))}
+        />
+        <FieldError msg={errors[`${target}.nombre`]} />
+      </div>
+
+      <div>
+        <label className={labelClass} htmlFor={`${target}-apellido`}>Apellido</label>
+        <input
+          id={`${target}-apellido`}
+          data-field={`${target}.apellido`}
+          type="text"
+          autoComplete="family-name"
+          value={value.apellido}
+          onChange={(e) => onChange('apellido', e.target.value)}
+          className={inputClass(Boolean(errors[`${target}.apellido`]))}
+        />
+        <FieldError msg={errors[`${target}.apellido`]} />
+      </div>
+
+      <div className="sm:col-span-2">
+        <label className={labelClass} htmlFor={`${target}-email`}>Email</label>
+        <input
+          id={`${target}-email`}
+          data-field={`${target}.email`}
+          type="email"
+          autoComplete="email"
+          value={value.email}
+          onChange={(e) => onChange('email', e.target.value)}
+          placeholder="tu@email.com"
+          className={inputClass(Boolean(errors[`${target}.email`]))}
+        />
+        <FieldError msg={errors[`${target}.email`]} />
+      </div>
+
+      <div className="sm:col-span-2">
+        <label className={labelClass} htmlFor={`${target}-telefono`}>
+          Teléfono <span className="text-[var(--gris-medio)] normal-case tracking-normal">(opcional)</span>
+        </label>
+        <input
+          id={`${target}-telefono`}
+          type="tel"
+          autoComplete="tel"
+          value={value.telefono}
+          onChange={(e) => onChange('telefono', e.target.value)}
+          placeholder="+54 11 ..."
+          className={inputClass(false)}
+        />
+      </div>
+
+      <div className="sm:col-span-2">
+        <label className={labelClass} htmlFor={`${target}-direccion`}>Dirección</label>
+        <input
+          id={`${target}-direccion`}
+          data-field={`${target}.direccion`}
+          type="text"
+          autoComplete="street-address"
+          value={value.direccion}
+          onChange={(e) => onChange('direccion', e.target.value)}
+          placeholder="Av. ejemplo 1234, depto B"
+          className={inputClass(Boolean(errors[`${target}.direccion`]))}
+        />
+        <FieldError msg={errors[`${target}.direccion`]} />
+      </div>
+
+      <div>
+        <label className={labelClass} htmlFor={`${target}-ciudad`}>Ciudad</label>
+        <input
+          id={`${target}-ciudad`}
+          data-field={`${target}.ciudad`}
+          type="text"
+          autoComplete="address-level2"
+          value={value.ciudad}
+          onChange={(e) => onChange('ciudad', e.target.value)}
+          className={inputClass(Boolean(errors[`${target}.ciudad`]))}
+        />
+        <FieldError msg={errors[`${target}.ciudad`]} />
+      </div>
+
+      <div>
+        <label className={labelClass} htmlFor={`${target}-cp`}>Código postal</label>
+        <input
+          id={`${target}-cp`}
+          data-field={`${target}.codigoPostal`}
+          type="text"
+          inputMode="numeric"
+          autoComplete="postal-code"
+          value={value.codigoPostal}
+          onChange={(e) => onChange('codigoPostal', e.target.value)}
+          className={inputClass(Boolean(errors[`${target}.codigoPostal`]))}
+        />
+        <FieldError msg={errors[`${target}.codigoPostal`]} />
+      </div>
+
+      <div className="sm:col-span-2">
+        <label className={labelClass} htmlFor={`${target}-pais`}>País</label>
+        <select
+          id={`${target}-pais`}
+          data-field={`${target}.pais`}
+          value={value.pais}
+          onChange={(e) => onChange('pais', e.target.value)}
+          className={inputClass(Boolean(errors[`${target}.pais`]))}
+        >
+          {PAISES.map((p) => (
+            <option key={p.code} value={p.code}>
+              {p.name}
+            </option>
+          ))}
+        </select>
+        <FieldError msg={errors[`${target}.pais`]} />
+      </div>
+    </div>
+  );
+}
+
 export default function CheckoutPage() {
   const router = useRouter();
   const { carrito, isMounted, vaciarCarrito } = useCart();
@@ -215,145 +358,8 @@ export default function CheckoutPage() {
     }
   };
 
-  // ---- UI helpers ----
-  const labelClass =
-    'block text-[11px] font-semibold tracking-[0.15em] uppercase mb-2 text-black';
-
-  const inputClass = (hasError) =>
-    `w-full bg-white border px-4 py-3 text-sm outline-none transition placeholder:text-gray-400 focus:border-black ${
-      hasError ? 'border-red-400' : 'border-[var(--gris-claro)]'
-    }`;
-
-  const fieldError = (key) =>
-    errors[key] ? (
-      <p className="mt-1 text-[11px] tracking-wide text-red-600">
-        {errors[key]}
-      </p>
-    ) : null;
-
-  const AddressForm = ({ target, value, onChange }) => (
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-      <div>
-        <label className={labelClass} htmlFor={`${target}-nombre`}>Nombre</label>
-        <input
-          id={`${target}-nombre`}
-          data-field={`${target}.nombre`}
-          type="text"
-          autoComplete="given-name"
-          value={value.nombre}
-          onChange={(e) => onChange('nombre', e.target.value)}
-          className={inputClass(Boolean(errors[`${target}.nombre`]))}
-        />
-        {fieldError(`${target}.nombre`)}
-      </div>
-
-      <div>
-        <label className={labelClass} htmlFor={`${target}-apellido`}>Apellido</label>
-        <input
-          id={`${target}-apellido`}
-          data-field={`${target}.apellido`}
-          type="text"
-          autoComplete="family-name"
-          value={value.apellido}
-          onChange={(e) => onChange('apellido', e.target.value)}
-          className={inputClass(Boolean(errors[`${target}.apellido`]))}
-        />
-        {fieldError(`${target}.apellido`)}
-      </div>
-
-      <div className="sm:col-span-2">
-        <label className={labelClass} htmlFor={`${target}-email`}>Email</label>
-        <input
-          id={`${target}-email`}
-          data-field={`${target}.email`}
-          type="email"
-          autoComplete="email"
-          value={value.email}
-          onChange={(e) => onChange('email', e.target.value)}
-          placeholder="tu@email.com"
-          className={inputClass(Boolean(errors[`${target}.email`]))}
-        />
-        {fieldError(`${target}.email`)}
-      </div>
-
-      <div className="sm:col-span-2">
-        <label className={labelClass} htmlFor={`${target}-telefono`}>
-          Teléfono <span className="text-[var(--gris-medio)] normal-case tracking-normal">(opcional)</span>
-        </label>
-        <input
-          id={`${target}-telefono`}
-          type="tel"
-          autoComplete="tel"
-          value={value.telefono}
-          onChange={(e) => onChange('telefono', e.target.value)}
-          placeholder="+54 11 ..."
-          className={inputClass(false)}
-        />
-      </div>
-
-      <div className="sm:col-span-2">
-        <label className={labelClass} htmlFor={`${target}-direccion`}>Dirección</label>
-        <input
-          id={`${target}-direccion`}
-          data-field={`${target}.direccion`}
-          type="text"
-          autoComplete="street-address"
-          value={value.direccion}
-          onChange={(e) => onChange('direccion', e.target.value)}
-          placeholder="Av. ejemplo 1234, depto B"
-          className={inputClass(Boolean(errors[`${target}.direccion`]))}
-        />
-        {fieldError(`${target}.direccion`)}
-      </div>
-
-      <div>
-        <label className={labelClass} htmlFor={`${target}-ciudad`}>Ciudad</label>
-        <input
-          id={`${target}-ciudad`}
-          data-field={`${target}.ciudad`}
-          type="text"
-          autoComplete="address-level2"
-          value={value.ciudad}
-          onChange={(e) => onChange('ciudad', e.target.value)}
-          className={inputClass(Boolean(errors[`${target}.ciudad`]))}
-        />
-        {fieldError(`${target}.ciudad`)}
-      </div>
-
-      <div>
-        <label className={labelClass} htmlFor={`${target}-cp`}>Código postal</label>
-        <input
-          id={`${target}-cp`}
-          data-field={`${target}.codigoPostal`}
-          type="text"
-          inputMode="numeric"
-          autoComplete="postal-code"
-          value={value.codigoPostal}
-          onChange={(e) => onChange('codigoPostal', e.target.value)}
-          className={inputClass(Boolean(errors[`${target}.codigoPostal`]))}
-        />
-        {fieldError(`${target}.codigoPostal`)}
-      </div>
-
-      <div className="sm:col-span-2">
-        <label className={labelClass} htmlFor={`${target}-pais`}>País</label>
-        <select
-          id={`${target}-pais`}
-          data-field={`${target}.pais`}
-          value={value.pais}
-          onChange={(e) => onChange('pais', e.target.value)}
-          className={inputClass(Boolean(errors[`${target}.pais`]))}
-        >
-          {PAISES.map((p) => (
-            <option key={p.code} value={p.code}>
-              {p.name}
-            </option>
-          ))}
-        </select>
-        {fieldError(`${target}.pais`)}
-      </div>
-    </div>
-  );
+  // AddressForm vive a nivel de módulo (arriba del archivo) para no
+  // perder el foco de los inputs al re-renderizar la página.
 
   return (
     <main className="bg-[var(--crema)] min-h-screen px-4 sm:px-6 lg:px-10 py-12 lg:py-16">
@@ -396,6 +402,7 @@ export default function CheckoutPage() {
               <AddressForm
                 target="shipping"
                 value={shipping}
+                errors={errors}
                 onChange={(field, value) => updateField('shipping', field, value)}
               />
             </section>
@@ -466,6 +473,7 @@ export default function CheckoutPage() {
                 <AddressForm
                   target="billing"
                   value={billing}
+                  errors={errors}
                   onChange={(field, value) => updateField('billing', field, value)}
                 />
               )}
