@@ -1,14 +1,30 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useCart } from '@/context/CartContext';
+import { useAuth } from '@/context/AuthContext';
 
 export default function Navbar() {
+  const router = useRouter();
   const { abrirCarrito, carrito, isMounted } = useCart();
+  const { isAuthenticated, signOut, loading: authLoading } = useAuth();
 
-  // El contador del carrito sólo se renderiza después del montaje en el cliente
-  // para evitar errores de hidratación (server: 0 vs client: N).
   const cartCount = isMounted ? carrito.length : 0;
+
+  const handleLogout = async () => {
+    try {
+      await signOut();
+      router.push('/');
+      router.refresh();
+    } catch (err) {
+      console.error('Error al cerrar sesión:', err);
+    }
+  };
+
+  // Mientras se rehidrata la sesión, mostramos "MI CUENTA" estilo guest
+  // para no parpadear entre estados.
+  const showAuthed = isMounted && !authLoading && isAuthenticated;
 
   return (
     <header>
@@ -29,7 +45,24 @@ export default function Navbar() {
               <Link href="/shop/tops">TOPS</Link>
               <Link href="/shop/bottoms">BOTTOMS</Link>
               <Link href="/shop/gorros">GORROS</Link>
-              <Link href="/login">MI CUENTA</Link>
+
+              {showAuthed ? (
+                <>
+                  <Link href="/dashboard">MI CUENTA</Link>
+                  <a
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      handleLogout();
+                    }}
+                  >
+                    SALIR
+                  </a>
+                </>
+              ) : (
+                <Link href="/login">MI CUENTA</Link>
+              )}
+
               <a
                 href="#"
                 className="carrito-link"

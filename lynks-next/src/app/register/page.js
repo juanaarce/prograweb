@@ -3,23 +3,35 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useAuth } from '@/context/AuthContext';
 
 /**
  * RegisterPage
- * Página de creación de cuenta de LYNKS.
+ * Página de creación de cuenta de LYNKS — conectada a Supabase Auth.
  * - Validación cliente: nombre/apellido requeridos, email regex,
  *   contraseña mínima 8 chars + al menos 1 número, confirmación que matchee.
  * - Manejo de errores por campo + banner general.
- * - Redirige a /dashboard al registrar con éxito.
- *
- * TODO: cuando conectes Supabase, reemplazá el bloque `// --- MOCK SIGNUP ---`
- * por supabase.auth.signUp({ email, password, options: { data: {...} } }).
  */
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+function traducirErrorSupabase(err) {
+  const msg = err?.message?.toLowerCase() || '';
+  if (msg.includes('user already registered') || msg.includes('already registered')) {
+    return 'Ya existe una cuenta con este email. Probá iniciando sesión.';
+  }
+  if (msg.includes('password should be at least')) {
+    return 'La contraseña no cumple el mínimo de seguridad de Supabase.';
+  }
+  if (msg.includes('invalid email')) {
+    return 'El email no es válido.';
+  }
+  return err?.message || 'No pudimos crear tu cuenta. Probá de nuevo.';
+}
+
 export default function RegisterPage() {
   const router = useRouter();
+  const { signUp } = useAuth();
 
   const [form, setForm] = useState({
     nombre: '',
@@ -34,6 +46,7 @@ export default function RegisterPage() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [emailEnviado, setEmailEnviado] = useState(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -94,19 +107,26 @@ export default function RegisterPage() {
     setLoading(true);
 
     try {
-      // --- MOCK SIGNUP ---
-      // Reemplazar por supabase.auth.signUp() cuando conectes el back.
-      await new Promise((resolve) => setTimeout(resolve, 900));
+      const { session } = await signUp({
+        email: form.email,
+        password: form.password,
+        nombre: form.nombre.trim(),
+        apellido: form.apellido.trim(),
+      });
 
-      // Demo: el email "exists@lynks.com" simula que ya está registrado.
-      if (form.email.trim().toLowerCase() === 'exists@lynks.com') {
-        throw new Error('Ya existe una cuenta con este email.');
+      // Si Supabase tiene confirmación de email habilitada (default),
+      // signUp NO crea sesión: hay que confirmar el mail primero.
+      if (!session) {
+        setEmailEnviado(true);
+        setLoading(false);
+        return;
       }
-      // --- /MOCK SIGNUP ---
 
+      // Si no hay confirmación de email, ya estás logueado.
       router.push('/dashboard');
+      router.refresh();
     } catch (err) {
-      setServerError(err.message || 'No pudimos crear tu cuenta. Probá de nuevo.');
+      setServerError(traducirErrorSupabase(err));
       setLoading(false);
     }
   };
@@ -119,6 +139,47 @@ export default function RegisterPage() {
     `w-full bg-white border px-4 py-3 text-sm outline-none transition placeholder:text-gray-400 focus:border-black ${
       hasError ? 'border-red-400' : 'border-[var(--gris-claro)]'
     }`;
+
+  // Pantalla de "te enviamos un email" cuando la confirmación está activa.
+  if (emailEnviado) {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-4 py-12 bg-[var(--crema)]">
+        <div className="w-full max-w-md bg-[var(--blanco)] border border-[var(--gris-claro)] p-10 text-center">
+          <div className="mx-auto mb-6 w-14 h-14 rounded-full bg-black flex items-center justify-center">
+            <svg
+              width="22"
+              height="22"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="white"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden
+            >
+              <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+              <polyline points="22,6 12,13 2,6" />
+            </svg>
+          </div>
+          <h2 className="text-xs tracking-[0.25em] uppercase font-semibold mb-4">
+            Revisá tu email
+          </h2>
+          <p className="text-sm tracking-wide text-[var(--gris-oscuro)] mb-2">
+            Te mandamos un link a <strong>{form.email}</strong>.
+          </p>
+          <p className="text-[12px] tracking-wide text-[var(--gris-medio)] mb-8">
+            Hacé click en el link para confirmar tu cuenta y poder iniciar sesión.
+          </p>
+          <Link
+            href="/login"
+            className="inline-block bg-black text-white px-8 py-4 text-xs font-bold tracking-[0.2em] uppercase hover:bg-[var(--amarillo)] hover:text-black transition"
+          >
+            Ir a iniciar sesión
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4 py-12 bg-[var(--crema)]">

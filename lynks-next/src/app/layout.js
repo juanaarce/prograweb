@@ -1,4 +1,5 @@
 import './globals.css';
+import { AuthProvider } from '@/context/AuthContext';
 import { CartProvider } from '@/context/CartContext';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
@@ -15,15 +16,17 @@ export default function RootLayout({ children }) {
   return (
     <html lang="es">
       <body>
-        <CartProvider>
-          <Navbar />
-          {children}
-          <Footer />
+        <AuthProvider>
+          <CartProvider>
+            <Navbar />
+            {children}
+            <Footer />
 
-          {/* Componentes globales que viven encima del contenido */}
-          <CartDrawer />
-          <SizeModal />
-        </CartProvider>
+            {/* Componentes globales que viven encima del contenido */}
+            <CartDrawer />
+            <SizeModal />
+          </CartProvider>
+        </AuthProvider>
       </body>
     </html>
   );

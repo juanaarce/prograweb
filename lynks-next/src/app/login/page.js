@@ -3,22 +3,37 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useAuth } from '@/context/AuthContext';
 
 /**
  * LoginPage
  * Página de inicio de sesión de LYNKS.
  * - Validación cliente: email con regex + password mínimo 6 chars.
  * - Manejo de errores por campo y un banner general para el submit.
+ * - Llama a signIn() del AuthContext (Supabase).
  * - Redirige a /dashboard al loguear con éxito.
- *
- * TODO: cuando conectes Supabase, reemplazá el bloque `// --- MOCK AUTH ---`
- * por una llamada a supabase.auth.signInWithPassword({ email, password }).
  */
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+// Traducción amigable de los códigos de error de Supabase.
+function traducirErrorSupabase(err) {
+  const msg = err?.message?.toLowerCase() || '';
+  if (msg.includes('invalid login credentials')) {
+    return 'Email o contraseña incorrectos.';
+  }
+  if (msg.includes('email not confirmed')) {
+    return 'Tenés que confirmar tu email antes de iniciar sesión. Revisá tu casilla.';
+  }
+  if (msg.includes('too many requests')) {
+    return 'Demasiados intentos. Esperá un momento e intentá de nuevo.';
+  }
+  return err?.message || 'No pudimos iniciar tu sesión. Probá de nuevo.';
+}
+
 export default function LoginPage() {
   const router = useRouter();
+  const { signIn } = useAuth();
 
   const [form, setForm] = useState({ email: '', password: '' });
   const [errors, setErrors] = useState({});
@@ -64,20 +79,11 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      // --- MOCK AUTH ---
-      // Reemplazar este bloque por la llamada real a Supabase.
-      await new Promise((resolve) => setTimeout(resolve, 800));
-
-      // Demo: cualquier credencial con email válido entra,
-      // salvo "test@fail.com" que simula error del servidor.
-      if (form.email.trim().toLowerCase() === 'test@fail.com') {
-        throw new Error('Email o contraseña incorrectos.');
-      }
-      // --- /MOCK AUTH ---
-
+      await signIn(form.email, form.password);
       router.push('/dashboard');
+      router.refresh(); // sincroniza Server Components con la nueva sesión
     } catch (err) {
-      setServerError(err.message || 'No pudimos iniciar tu sesión. Probá de nuevo.');
+      setServerError(traducirErrorSupabase(err));
       setLoading(false);
     }
   };
