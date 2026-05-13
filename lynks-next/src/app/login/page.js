@@ -189,16 +189,6 @@ export default function LoginPage() {
               )}
             </div>
 
-            {/* Olvidaste contraseña */}
-            <div className="flex justify-end">
-              <Link
-                href="/forgot-password"
-                className="text-[11px] tracking-wide text-[var(--gris-medio)] hover:text-black transition"
-              >
-                ¿Olvidaste tu contraseña?
-              </Link>
-            </div>
-
             {/* Submit */}
             <button
               type="submit"

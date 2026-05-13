@@ -1,9 +1,10 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useCart } from '@/context/CartContext';
+import { useAuth } from '@/context/AuthContext';
 
 /**
  * Checkout
@@ -12,10 +13,8 @@ import { useCart } from '@/context/CartContext';
  * - Método de envío (Standard / Express / Retiro).
  * - Form de facturación, con opción de usar la misma dirección de envío.
  * - Breakdown de costos: subtotal, envío, IVA (incluido), total.
- * - Submit mockeado — redirige a /checkout/success.
- *
- * TODO: cuando conectes Supabase + pasarela de pago, reemplazar el bloque
- * `// --- MOCK SUBMIT ---` por la creación real de la orden.
+ * - Al confirmar, inserta `orders` + `order_items` en Supabase y
+ *   redirige a /checkout/success?order_id=xxx
  */
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -41,13 +40,6 @@ const SHIPPING_METHODS = [
   },
 ];
 
-const PAISES = [
-  { code: 'AR', name: 'Argentina' },
-  { code: 'UY', name: 'Uruguay' },
-  { code: 'CL', name: 'Chile' },
-  { code: 'BR', name: 'Brasil' },
-];
-
 const EMPTY_ADDRESS = {
   nombre: '',
   apellido: '',
@@ -55,8 +47,8 @@ const EMPTY_ADDRESS = {
   telefono: '',
   direccion: '',
   ciudad: '',
+  provincia: '',
   codigoPostal: '',
-  pais: 'AR',
 };
 
 // Pretty currency en pesos argentinos
@@ -176,6 +168,21 @@ function AddressForm({ target, value, errors, onChange }) {
       </div>
 
       <div>
+        <label className={labelClass} htmlFor={`${target}-provincia`}>Provincia</label>
+        <input
+          id={`${target}-provincia`}
+          data-field={`${target}.provincia`}
+          type="text"
+          autoComplete="address-level1"
+          value={value.provincia}
+          onChange={(e) => onChange('provincia', e.target.value)}
+          placeholder="Buenos Aires"
+          className={inputClass(Boolean(errors[`${target}.provincia`]))}
+        />
+        <FieldError msg={errors[`${target}.provincia`]} />
+      </div>
+
+      <div className="sm:col-span-2">
         <label className={labelClass} htmlFor={`${target}-cp`}>Código postal</label>
         <input
           id={`${target}-cp`}
@@ -189,24 +196,6 @@ function AddressForm({ target, value, errors, onChange }) {
         />
         <FieldError msg={errors[`${target}.codigoPostal`]} />
       </div>
-
-      <div className="sm:col-span-2">
-        <label className={labelClass} htmlFor={`${target}-pais`}>País</label>
-        <select
-          id={`${target}-pais`}
-          data-field={`${target}.pais`}
-          value={value.pais}
-          onChange={(e) => onChange('pais', e.target.value)}
-          className={inputClass(Boolean(errors[`${target}.pais`]))}
-        >
-          {PAISES.map((p) => (
-            <option key={p.code} value={p.code}>
-              {p.name}
-            </option>
-          ))}
-        </select>
-        <FieldError msg={errors[`${target}.pais`]} />
-      </div>
     </div>
   );
 }
@@ -214,6 +203,7 @@ function AddressForm({ target, value, errors, onChange }) {
 export default function CheckoutPage() {
   const router = useRouter();
   const { carrito, isMounted, vaciarCarrito } = useCart();
+  const { user, loading: authLoading, supabase } = useAuth();
 
   const [shipping, setShipping] = useState(EMPTY_ADDRESS);
   const [billing, setBilling] = useState(EMPTY_ADDRESS);
@@ -224,28 +214,34 @@ export default function CheckoutPage() {
   const [serverError, setServerError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Agrupamos el carrito por id + talle para mostrar cantidades.
-  const lineas = useMemo(() => {
-    const map = new Map();
-    for (const item of carrito) {
-      const key = `${item.id}__${item.talle}`;
-      const existing = map.get(key);
-      if (existing) {
-        existing.cantidad += 1;
-      } else {
-        map.set(key, {
-          key,
-          id: item.id,
-          nombre: item.nombre,
-          imagen: item.imagen,
-          talle: item.talle,
-          precioUnit: parsePrecio(item.precio),
-          cantidad: 1,
-        });
-      }
+  // Prefill del email con el usuario logueado.
+  useEffect(() => {
+    if (user?.email && !shipping.email) {
+      setShipping((prev) => ({
+        ...prev,
+        email: user.email,
+        nombre: user.user_metadata?.nombre || prev.nombre,
+        apellido: user.user_metadata?.apellido || prev.apellido,
+      }));
     }
-    return Array.from(map.values());
-  }, [carrito]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
+
+  // El CartContext ya entrega cada línea con su `cantidad`.
+  // Acá sólo derivamos `precioUnit` numérico para los cálculos.
+  const lineas = useMemo(
+    () =>
+      carrito.map((item) => ({
+        key: `${item.id}__${item.talle}`,
+        id: item.id,
+        nombre: item.nombre,
+        imagen: item.imagen,
+        talle: item.talle,
+        precioUnit: parsePrecio(item.precio),
+        cantidad: item.cantidad,
+      })),
+    [carrito]
+  );
 
   // Cálculos económicos
   const subtotal = lineas.reduce(
@@ -309,18 +305,26 @@ export default function CheckoutPage() {
     }
     if (!addr.direccion.trim()) errs[`${prefix}.direccion`] = 'Requerido';
     if (!addr.ciudad.trim()) errs[`${prefix}.ciudad`] = 'Requerido';
+    if (!addr.provincia.trim()) errs[`${prefix}.provincia`] = 'Requerido';
     if (!addr.codigoPostal.trim()) {
       errs[`${prefix}.codigoPostal`] = 'Requerido';
     } else if (!/^[0-9A-Za-z]{3,10}$/.test(addr.codigoPostal.trim())) {
       errs[`${prefix}.codigoPostal`] = 'CP inválido';
     }
-    if (!addr.pais) errs[`${prefix}.pais`] = 'Requerido';
     return errs;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setServerError('');
+
+    // 1) Requiere sesión iniciada (las RLS exigen user_id = auth.uid())
+    if (!user) {
+      setServerError(
+        'Necesitás iniciar sesión para finalizar la compra.'
+      );
+      return;
+    }
 
     const shippingErrs = validateAddress(shipping, 'shipping');
     const billingErrs = useSameAddress
@@ -340,18 +344,62 @@ export default function CheckoutPage() {
     setLoading(true);
 
     try {
-      // --- MOCK SUBMIT ---
-      // Reemplazar por la creación real de la orden en Supabase / Stripe / etc.
-      await new Promise((resolve) => setTimeout(resolve, 1200));
+      // 2) Crear la orden en Supabase
+      const { data: orderRow, error: orderErr } = await supabase
+        .from('orders')
+        .insert({
+          user_id: user.id,
+          subtotal,
+          shipping_cost: envio,
+          total,
+          shipping_method: shippingMethodId,
+          shipping_nombre: shipping.nombre.trim(),
+          shipping_apellido: shipping.apellido.trim(),
+          shipping_email: shipping.email.trim(),
+          shipping_telefono: shipping.telefono.trim() || '',
+          shipping_direccion: shipping.direccion.trim(),
+          shipping_ciudad: shipping.ciudad.trim(),
+          shipping_provincia: shipping.provincia.trim(),
+          shipping_codigo_postal: shipping.codigoPostal.trim(),
+        })
+        .select('id')
+        .single();
 
-      // Demo: si el email del envío termina en @fail.com, fingimos un error.
-      if (shipping.email.trim().toLowerCase().endsWith('@fail.com')) {
-        throw new Error('No pudimos procesar el pago. Probá con otro medio.');
+      if (orderErr || !orderRow) {
+        console.error('Error creando orden:', orderErr);
+        throw new Error(
+          'No pudimos crear tu pedido. Probá de nuevo en un momento.'
+        );
       }
-      // --- /MOCK SUBMIT ---
 
+      // 3) Insertar los items (un row por línea agrupada con su cantidad)
+      const itemsPayload = lineas.map((l) => ({
+        order_id: orderRow.id,
+        product_id: String(l.id),
+        nombre: l.nombre,
+        precio: l.precioUnit,
+        talle: l.talle,
+        cantidad: l.cantidad,
+        imagen: l.imagen,
+      }));
+
+      const { error: itemsErr } = await supabase
+        .from('order_items')
+        .insert(itemsPayload);
+
+      if (itemsErr) {
+        console.error('Error insertando items:', itemsErr);
+        // Intentamos rollback manual de la orden — si la borrada falla,
+        // mostramos error de todas formas para que reintenten.
+        await supabase.from('orders').delete().eq('id', orderRow.id);
+        throw new Error(
+          'No pudimos guardar los items del pedido. Probá de nuevo.'
+        );
+      }
+
+      // 4) Vaciar carrito y mandar a la confirmación con el ID del pedido
       vaciarCarrito();
-      router.push('/checkout/success');
+      router.push(`/checkout/success?order_id=${orderRow.id}`);
     } catch (err) {
       setServerError(err.message || 'Error al procesar la compra.');
       setLoading(false);
@@ -384,6 +432,24 @@ export default function CheckoutPage() {
         >
           {/* ---------- IZQUIERDA: forms ---------- */}
           <div className="lg:col-span-2 space-y-10">
+            {/* Sesión requerida */}
+            {!authLoading && !user && (
+              <div
+                role="alert"
+                className="border border-[var(--gris-claro)] bg-white px-4 py-4 text-[12px] tracking-wide text-[var(--gris-oscuro)] flex flex-col sm:flex-row sm:items-center gap-3 sm:justify-between"
+              >
+                <span>
+                  Necesitás iniciar sesión para finalizar la compra.
+                </span>
+                <Link
+                  href="/login"
+                  className="inline-block bg-black text-white px-5 py-2 text-[11px] font-bold tracking-[0.2em] uppercase hover:bg-[var(--amarillo)] hover:text-black transition text-center"
+                >
+                  Iniciar sesión
+                </Link>
+              </div>
+            )}
+
             {/* Error general */}
             {serverError && (
               <div
@@ -542,10 +608,14 @@ export default function CheckoutPage() {
 
               <button
                 type="submit"
-                disabled={loading}
+                disabled={loading || authLoading || !user}
                 className="mt-6 w-full bg-black text-white py-4 text-xs font-bold tracking-[0.2em] uppercase transition hover:bg-[var(--amarillo)] hover:text-black disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:bg-black disabled:hover:text-white"
               >
-                {loading ? 'Procesando…' : 'Completar compra'}
+                {loading
+                  ? 'Procesando…'
+                  : !user
+                  ? 'Iniciá sesión para comprar'
+                  : 'Completar compra'}
               </button>
 
               <p className="mt-4 text-center text-[10px] tracking-[0.15em] uppercase text-[var(--gris-medio)]">

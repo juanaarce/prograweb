@@ -6,14 +6,15 @@ import { useCart } from '@/context/CartContext';
 /**
  * CartDrawer
  * Panel lateral del carrito + overlay.
- * Lee todo el estado desde el CartContext.
- * Se desliza con la clase .open (definida en globals.css).
+ * Cada línea tiene `cantidad`. El botón "✕" resta una unidad
+ * (y si llega a 0 saca el item del carrito).
  */
 export default function CartDrawer() {
   const router = useRouter();
   const {
     carrito,
     total,
+    totalItems,
     isCartOpen,
     isMounted,
     cerrarCarrito,
@@ -21,14 +22,12 @@ export default function CartDrawer() {
   } = useCart();
 
   const irAlCheckout = () => {
-    if (!isMounted || carrito.length === 0) return;
+    if (!isMounted || totalItems === 0) return;
     cerrarCarrito();
     router.push('/checkout');
   };
 
-  // Antes del montaje en el cliente, mostramos el carrito como vacío
-  // para que el HTML del servidor coincida con la primera pintura del cliente
-  // (evitamos errores de hidratación si en localStorage había productos).
+  // Antes del montaje mostramos vacío para evitar errores de hidratación.
   const items = isMounted ? carrito : [];
 
   const totalFormateado = isMounted
@@ -82,18 +81,35 @@ export default function CartDrawer() {
               TU CARRITO ESTÁ VACÍO
             </p>
           ) : (
-            items.map((item, index) => (
-              <div className="cart-item" key={`${item.id}-${item.talle}-${index}`}>
+            items.map((item) => (
+              <div
+                className="cart-item"
+                key={`${item.id}-${item.talle}`}
+              >
                 <img src={item.imagen} alt={item.nombre} />
                 <div className="item-info">
                   <p className="item-name">{item.nombre}</p>
                   <p className="item-meta">TALLE: {item.talle}</p>
-                  <p className="item-meta">{item.precio}</p>
+                  <p className="item-meta">
+                    {item.precio}
+                    {item.cantidad > 1 ? ` × ${item.cantidad}` : ''}
+                  </p>
                 </div>
                 <button
                   className="remove-item"
-                  onClick={() => eliminarDelCarrito(index)}
-                  aria-label="Eliminar producto"
+                  onClick={() =>
+                    eliminarDelCarrito(item.id, item.talle)
+                  }
+                  aria-label={
+                    item.cantidad > 1
+                      ? 'Quitar una unidad'
+                      : 'Eliminar producto'
+                  }
+                  title={
+                    item.cantidad > 1
+                      ? 'Quitar una unidad'
+                      : 'Eliminar producto'
+                  }
                 >
                   <svg
                     width="15"
@@ -119,7 +135,7 @@ export default function CartDrawer() {
           <button
             className="checkout-btn"
             onClick={irAlCheckout}
-            disabled={!isMounted || carrito.length === 0}
+            disabled={!isMounted || totalItems === 0}
           >
             FINALIZAR COMPRA
           </button>

@@ -7,10 +7,10 @@ import { useAuth } from '@/context/AuthContext';
 
 export default function Navbar() {
   const router = useRouter();
-  const { abrirCarrito, carrito, isMounted } = useCart();
+  const { abrirCarrito, totalItems, isMounted } = useCart();
   const { isAuthenticated, signOut, loading: authLoading } = useAuth();
 
-  const cartCount = isMounted ? carrito.length : 0;
+  const cartCount = isMounted ? totalItems : 0;
 
   const handleLogout = async () => {
     try {
