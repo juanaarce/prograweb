@@ -8,7 +8,7 @@ import { useAuth } from '@/context/AuthContext';
 export default function Navbar() {
   const router = useRouter();
   const { abrirCarrito, totalItems, isMounted } = useCart();
-  const { isAuthenticated, signOut, loading: authLoading } = useAuth();
+  const { isAuthenticated, isAdmin, signOut, loading: authLoading } = useAuth();
 
   const cartCount = isMounted ? totalItems : 0;
 
@@ -49,6 +49,7 @@ export default function Navbar() {
               {showAuthed ? (
                 <>
                   <Link href="/dashboard">MI CUENTA</Link>
+                  {isAdmin && <Link href="/admin">ADMIN</Link>}
                   <a
                     href="#"
                     onClick={(e) => {

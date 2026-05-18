@@ -6,8 +6,8 @@ export const metadata = {
 };
 
 // /shop  -> muestra todos los productos
-export default function ShopPage() {
-  const productos = getProductsArray();
+export default async function ShopPage() {
+  const productos = await getProductsArray();
 
   return (
     <main>

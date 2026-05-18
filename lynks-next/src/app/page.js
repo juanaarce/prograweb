@@ -10,10 +10,13 @@ const HOME_FEATURED_IDS = [
   'airlift-cap-chocolate',
 ];
 
-export default function Home() {
-  const featured = HOME_FEATURED_IDS
-    .map((id) => getProductById(id))
-    .filter(Boolean);
+export default async function Home() {
+  // Buscamos los 4 productos destacados en paralelo. Si alguno no existe
+  // (porque la admin lo dio de baja), simplemente lo filtramos.
+  const featuredRaw = await Promise.all(
+    HOME_FEATURED_IDS.map((id) => getProductById(id))
+  );
+  const featured = featuredRaw.filter(Boolean);
 
   return (
     <main>

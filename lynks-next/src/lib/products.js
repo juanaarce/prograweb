@@ -1,90 +1,94 @@
-// Catálogo de productos LYNKS
-// Migrado desde main.js — fuente única de verdad para todo el front-end.
+// Helpers de catálogo de productos LYNKS.
+// Antes era un objeto en memoria; ahora lee de la tabla `products` en Supabase.
+// Mantenemos los nombres de funciones para no romper a los consumers,
+// pero todas son ahora ASÍNCRONAS — usalas con `await` desde Server Components.
 
-export const products = {
-  "core-tank-vanilla": {
-    id: "core-tank-vanilla",
-    nombre: "CORE TANK VANILLA",
-    precio: "$45.000",
-    descripcion:
-      "Nuestra musculosa estrella en color vainilla. Tela premium de alta compresión.",
-    imagen: "/coretankamarillo.jpg",
-    categoria: "tops",
-  },
-  "core-tank-chocolate": {
-    id: "core-tank-chocolate",
-    nombre: "CORE TANK CHOCOLATE",
-    precio: "$45.000",
-    descripcion:
-      "Nuestra musculosa estrella en color chocolate. Tela premium de alta compresión.",
-    imagen: "/coretankmarron.jpg",
-    categoria: "tops",
-  },
-  "high-waist-stone": {
-    id: "high-waist-stone",
-    nombre: "HIGH-WAIST LEGGING STONE",
-    precio: "$60.000",
-    descripcion:
-      "Leggings de tiro alto en color piedra. Costuras reforzadas para máximo confort.",
-    imagen: "/calzagris.jpg",
-    categoria: "bottoms",
-  },
-  "high-waist-black": {
-    id: "high-waist-black",
-    nombre: "HIGH-WAIST LEGGING BLACK",
-    precio: "$60.000",
-    descripcion:
-      "Leggings de tiro alto en color negro. Costuras reforzadas para máximo confort.",
-    imagen: "/calzanegra.jpg",
-    categoria: "bottoms",
-  },
-  "luna-top-white": {
-    id: "luna-top-white",
-    nombre: "LUNA TOP WHITE",
-    precio: "$40.000",
-    descripcion:
-      "El equilibrio perfecto entre soporte y libertad. Tejido rib acanalado de alta elasticidad, diseñado para acompañarte todo el día.",
-    imagen: "/lunatopblanco.jpg",
-    categoria: "tops",
-  },
-  "luna-top-black": {
-    id: "luna-top-black",
-    nombre: "LUNA TOP BLACK",
-    precio: "$40.000",
-    descripcion:
-      "El equilibrio perfecto entre soporte y libertad. Tejido rib acanalado de alta elasticidad, diseñado para acompañarte todo el día.",
-    imagen: "/lunatopnegro.jpg",
-    categoria: "tops",
-  },
-  "airlift-cap-chocolate": {
-    id: "airlift-cap-chocolate",
-    nombre: "AIRLIFT CAP CHOCOLATE",
-    precio: "$25.000",
-    descripcion:
-      "Gorra ajustable con logo bordado. El accesorio perfecto para tu post-workout.",
-    imagen: "/airliftcapmarron.jpg",
-    categoria: "gorros",
-  },
-  "airlift-cap-vanilla": {
-    id: "airlift-cap-vanilla",
-    nombre: "AIRLIFT CAP VANILLA",
-    precio: "$25.000",
-    descripcion:
-      "Gorra ajustable con logo bordado. El accesorio perfecto para tu post-workout.",
-    imagen: "/airliftcapcrema.jpg",
-    categoria: "gorros",
-  },
-};
+import { createClient } from '@/lib/supabase/server';
 
-// Helpers
-export const getProductsArray = () => Object.values(products);
+/**
+ * Formatea un precio entero (en pesos) al formato "$45.000" usado en toda la UI.
+ * La función `parsePrecio` del CartContext hace el camino inverso.
+ */
+function formatPrecio(precio) {
+  return `$${Number(precio).toLocaleString('es-AR')}`;
+}
 
-export const getProductById = (id) => products[id] || null;
+/**
+ * Convierte una fila cruda de Supabase al shape que esperan los componentes
+ * (precio como string con "$", id/imagen/categoria tal cual).
+ */
+function rowToProduct(row) {
+  return {
+    id: row.id,
+    nombre: row.nombre,
+    precio: formatPrecio(row.precio),
+    descripcion: row.descripcion || '',
+    imagen: row.imagen,
+    categoria: row.categoria,
+  };
+}
 
-export const getProductsByCategory = (categoria) => {
-  if (!categoria || categoria === "novedades") return getProductsArray();
-  return getProductsArray().filter((p) => p.categoria === categoria);
-};
+/**
+ * Devuelve todos los productos activos, en orden de creación (más viejo primero).
+ */
+export async function getProductsArray() {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('products')
+    .select('*')
+    .eq('activo', true)
+    .order('created_at', { ascending: true });
 
-// Lista de categorías válidas para la ruta dinámica
-export const validCategories = ["tops", "bottoms", "gorros", "novedades"];
+  if (error) {
+    console.error('[products] getProductsArray error:', error.message);
+    return [];
+  }
+  return (data || []).map(rowToProduct);
+}
+
+/**
+ * Busca un producto por id (slug). Devuelve null si no existe o está inactivo.
+ */
+export async function getProductById(id) {
+  if (!id) return null;
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('products')
+    .select('*')
+    .eq('id', id)
+    .eq('activo', true)
+    .maybeSingle();
+
+  if (error) {
+    console.error('[products] getProductById error:', error.message);
+    return null;
+  }
+  if (!data) return null;
+  return rowToProduct(data);
+}
+
+/**
+ * Devuelve productos de una categoría. "novedades" se trata como "todos".
+ */
+export async function getProductsByCategory(categoria) {
+  if (!categoria || categoria === 'novedades') {
+    return getProductsArray();
+  }
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('products')
+    .select('*')
+    .eq('activo', true)
+    .eq('categoria', categoria)
+    .order('created_at', { ascending: true });
+
+  if (error) {
+    console.error('[products] getProductsByCategory error:', error.message);
+    return [];
+  }
+  return (data || []).map(rowToProduct);
+}
+
+// Lista de categorías válidas para la ruta dinámica /shop/[category].
+// Se mantiene hardcodeada porque el constraint de la BD también las restringe a estas tres.
+export const validCategories = ['tops', 'bottoms', 'gorros', 'novedades'];

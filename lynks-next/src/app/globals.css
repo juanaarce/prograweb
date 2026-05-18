@@ -309,9 +309,14 @@ header {
 .grid-title {
     text-align: center !important;
     width: 100% !important;
+    margin-top: 80px !important;        /* Separación respecto al header */
     margin-bottom: 50px !important;
-    text-transform: uppercase;
-    letter-spacing: 3px; /* Estilo de lujo */
+    text-transform: uppercase !important;
+    letter-spacing: 4px !important;     /* Estilo de lujo */
+    font-size: 2rem !important;         /* Un poco más grande */
+    font-weight: 800 !important;        /* Bien negrita */
+    font-family: var(--fuente-sans) !important;
+    color: var(--negro) !important;
 }
 /* 2. LA TARJETA (Cada columna) */
 .product-card {
@@ -613,6 +618,260 @@ header {
         font-size: 22px !important;
     }
 }
+
+/* =========================================
+   PANEL ADMIN
+   ========================================= */
+
+.admin-section {
+    font-family: var(--fuente-sans);
+    min-height: 70vh;
+    background-color: var(--crema);
+}
+
+/* Sub-navbar que se "pega" debajo del navbar principal */
+.admin-subnav {
+    background-color: var(--blanco);
+    border-bottom: 1px solid var(--gris-claro);
+    font-family: var(--fuente-sans);
+}
+
+.admin-subnav-inner {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 18px 5%;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.admin-subnav-label {
+    margin: 0 0 4px 0;
+    font-family: var(--fuente-sans);
+    font-size: 0.65rem;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--gris-medio);
+}
+
+.admin-subnav-title {
+    margin: 0;
+    font-family: var(--fuente-sans);
+    font-size: 1rem;
+    font-weight: 600;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--negro);
+}
+
+.admin-subnav-links {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 25px;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.admin-subnav-links a {
+    font-family: var(--fuente-sans);
+    font-size: 0.8rem;
+    font-weight: 500;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--negro);
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+.admin-subnav-links a:hover { color: var(--amarillo); }
+.admin-subnav-links .back-link { color: var(--gris-medio); }
+
+.admin-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 40px 5%;
+    font-family: var(--fuente-sans);
+}
+
+.admin-content h1,
+.admin-content h2,
+.admin-content h3,
+.admin-content h4,
+.admin-content p,
+.admin-content label,
+.admin-content span,
+.admin-content td,
+.admin-content th,
+.admin-content button,
+.admin-content a,
+.admin-content input,
+.admin-content select,
+.admin-content textarea {
+    font-family: var(--fuente-sans);
+}
+
+/* Botón primario sólido con hover amarillo */
+.admin-btn {
+    display: inline-block;
+    background-color: var(--negro);
+    color: var(--blanco);
+    border: 1px solid var(--negro);
+    padding: 12px 26px;
+    font-family: var(--fuente-sans);
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    text-decoration: none;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.admin-btn:hover {
+    background-color: var(--amarillo);
+    color: var(--negro);
+    border-color: var(--amarillo);
+}
+
+.admin-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Botón outline (cancelar / secundario) con hover amarillo */
+.admin-btn-outline {
+    display: inline-block;
+    background-color: transparent;
+    color: var(--negro);
+    border: 1px solid var(--negro);
+    padding: 12px 26px;
+    font-family: var(--fuente-sans);
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    text-decoration: none;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.admin-btn-outline:hover {
+    background-color: var(--amarillo);
+    color: var(--negro);
+    border-color: var(--amarillo);
+}
+
+/* Link de acción (Editar, Ver detalle, toggle, etc.) — hover amarillo */
+.admin-link {
+    background: none;
+    border: none;
+    padding: 0;
+    font-family: var(--fuente-sans);
+    font-size: 0.65rem;
+    font-weight: 500;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--negro);
+    text-decoration: underline;
+    cursor: pointer;
+    transition: color 0.3s ease;
+}
+
+.admin-link:hover { color: var(--amarillo); }
+.admin-link:disabled { opacity: 0.5; cursor: not-allowed; }
+.admin-link.danger { color: #b91c1c; }
+.admin-link.danger:hover { color: var(--amarillo); }
+.admin-link.success { color: #15803d; }
+.admin-link.success:hover { color: var(--amarillo); }
+.admin-link.muted { color: var(--gris-medio); }
+.admin-link.muted:hover { color: var(--amarillo); }
+
+/* Cards de la landing admin */
+.admin-card {
+    display: block;
+    background-color: var(--blanco);
+    border: 1px solid var(--gris-claro);
+    padding: 32px;
+    font-family: var(--fuente-sans);
+    text-decoration: none;
+    color: var(--negro);
+    transition: all 0.3s ease;
+}
+
+.admin-card:hover {
+    background-color: var(--amarillo);
+    border-color: var(--amarillo);
+    color: var(--negro);
+}
+
+/* Tabla admin */
+.admin-table {
+    width: 100%;
+    border-collapse: collapse;
+    background-color: var(--blanco);
+    font-family: var(--fuente-sans);
+}
+
+.admin-table th, .admin-table td {
+    padding: 14px 16px;
+    text-align: left;
+    border-bottom: 1px solid var(--gris-claro);
+    font-size: 0.8rem;
+    vertical-align: middle;
+}
+
+.admin-table th {
+    font-size: 0.65rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--gris-medio);
+    font-weight: 600;
+}
+
+.admin-table tr:last-child td { border-bottom: none; }
+
+/* Formularios admin */
+.admin-card-form {
+    background-color: var(--blanco);
+    border: 1px solid var(--gris-claro);
+    padding: 32px;
+    font-family: var(--fuente-sans);
+    max-width: 640px;
+}
+
+.admin-label {
+    display: block;
+    font-family: var(--fuente-sans);
+    font-size: 0.65rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--gris-medio);
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+.admin-input, .admin-select, .admin-textarea {
+    width: 100%;
+    border: 1px solid var(--gris-claro);
+    padding: 10px 12px;
+    font-family: var(--fuente-sans);
+    font-size: 0.85rem;
+    background-color: white;
+    color: var(--negro);
+}
+
+.admin-input:disabled {
+    background-color: #f5f5f5;
+    color: var(--gris-medio);
+}
+
+.admin-textarea { resize: vertical; }
 
 /* Cruces y Botones de cierre */
 .close-cart-btn, .remove-item {

@@ -1,15 +1,13 @@
 import { notFound } from 'next/navigation';
 import ProductDetailClient from '@/components/ProductDetailClient';
-import { getProductById, getProductsArray } from '@/lib/products';
+import { getProductById } from '@/lib/products';
 
-// Pre-genera la página estática para cada producto.
-export function generateStaticParams() {
-  return getProductsArray().map((p) => ({ id: p.id }));
-}
+// Sacamos generateStaticParams: ahora cada detalle se renderiza on-demand
+// para que un cambio de precio o un alta nueva desde admin aparezca al toque.
 
 export async function generateMetadata({ params }) {
   const { id } = await params;
-  const product = getProductById(id);
+  const product = await getProductById(id);
   return {
     title: product ? `${product.nombre} | LYNKS` : 'Producto | LYNKS',
     description: product?.descripcion,
@@ -18,12 +16,12 @@ export async function generateMetadata({ params }) {
 
 /**
  * /product/[id]
- * Server Component que busca el producto en el catálogo y delega
- * la UI interactiva al ProductDetailClient.
+ * Server Component que busca el producto en la BD y delega la UI interactiva
+ * al ProductDetailClient.
  */
 export default async function ProductDetailPage({ params }) {
   const { id } = await params;
-  const product = getProductById(id);
+  const product = await getProductById(id);
 
   if (!product) {
     notFound();

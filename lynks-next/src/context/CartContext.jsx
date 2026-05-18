@@ -75,7 +75,10 @@ export function CartProvider({ children }) {
 
   // UI
   const [isCartOpen, setIsCartOpen] = useState(false);
-  const [sizeModalProductId, setSizeModalProductId] = useState(null);
+  // Guardamos el producto entero (no sólo el id) porque el SizeModal corre
+  // en cliente y ya no puede resolver getProductById (que ahora es async y
+  // pega contra Supabase server-side).
+  const [sizeModalProduct, setSizeModalProduct] = useState(null);
 
   // Flags de ciclo de vida
   const [isMounted, setIsMounted] = useState(false);
@@ -307,9 +310,9 @@ export function CartProvider({ children }) {
   const abrirCarrito = () => setIsCartOpen(true);
   const cerrarCarrito = () => setIsCartOpen(false);
 
-  const abrirModalTalle = (productoId) =>
-    setSizeModalProductId(productoId);
-  const cerrarModalTalle = () => setSizeModalProductId(null);
+  const abrirModalTalle = (producto) =>
+    setSizeModalProduct(producto);
+  const cerrarModalTalle = () => setSizeModalProduct(null);
 
   // Total numérico (precio * cantidad por cada línea).
   const total = useMemo(
@@ -332,7 +335,7 @@ export function CartProvider({ children }) {
     total,
     totalItems,
     isCartOpen,
-    sizeModalProductId,
+    sizeModalProduct,
     isMounted,
     agregarAlCarrito,
     eliminarDelCarrito,

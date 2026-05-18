@@ -2,28 +2,29 @@
 
 import { useState } from 'react';
 import { useCart } from '@/context/CartContext';
-import { getProductById } from '@/lib/products';
 
 const TALLES = ['S', 'M', 'L'];
 
 /**
  * SizeModal
  * Modal de selección de talle (Quick Add desde el catálogo).
- * Se abre cuando sizeModalProductId del CartContext tiene un valor.
+ * Se abre cuando sizeModalProduct del CartContext tiene un producto.
+ *
+ * Ya NO resuelve el producto por id — recibe el objeto entero desde el
+ * CartContext (que lo guardó cuando se abrió el modal desde la ProductCard).
+ * Esto permite que el catálogo viva en Supabase y la lookup sea server-only.
  */
 export default function SizeModal() {
   const {
-    sizeModalProductId,
+    sizeModalProduct,
     cerrarModalTalle,
     agregarAlCarrito,
   } = useCart();
 
   const [talleSeleccionado, setTalleSeleccionado] = useState(null);
 
-  const isOpen = Boolean(sizeModalProductId);
-  const producto = sizeModalProductId
-    ? getProductById(sizeModalProductId)
-    : null;
+  const isOpen = Boolean(sizeModalProduct);
+  const producto = sizeModalProduct;
 
   const handleClose = () => {
     setTalleSeleccionado(null);

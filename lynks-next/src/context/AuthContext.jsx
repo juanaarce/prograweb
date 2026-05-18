@@ -24,24 +24,55 @@ export function AuthProvider({ children }) {
 
   const [session, setSession] = useState(null);
   const [user, setUser] = useState(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
+
+  // Consulta la tabla profiles para saber si el user es admin.
+  // Se llama después de cada cambio de sesión.
+  const fetchIsAdmin = async (uid) => {
+    if (!uid) {
+      setIsAdmin(false);
+      return;
+    }
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('is_admin')
+        .eq('id', uid)
+        .maybeSingle();
+      if (error) {
+        setIsAdmin(false);
+        return;
+      }
+      setIsAdmin(Boolean(data?.is_admin));
+    } catch {
+      setIsAdmin(false);
+    }
+  };
 
   useEffect(() => {
     let mounted = true;
 
     // 1) Rehidratar sesión inicial.
-    supabase.auth.getSession().then(({ data }) => {
+    supabase.auth.getSession().then(async ({ data }) => {
       if (!mounted) return;
       setSession(data.session);
       setUser(data.session?.user ?? null);
+      await fetchIsAdmin(data.session?.user?.id);
+      if (!mounted) return;
       setLoading(false);
     });
 
     // 2) Escuchar cambios futuros.
+    // OJO: la callback NO puede ser async ni usar await — Supabase mantiene
+    // un lock interno durante toda la callback y, si esperamos a una query,
+    // signInWithPassword se cuelga indefinidamente. Disparamos fetchIsAdmin
+    // sin await; se actualizará en background.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event, newSession) => {
         setSession(newSession);
         setUser(newSession?.user ?? null);
+        fetchIsAdmin(newSession?.user?.id);
       }
     );
 
@@ -49,6 +80,7 @@ export function AuthProvider({ children }) {
       mounted = false;
       subscription.unsubscribe();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [supabase]);
 
   // --- Acciones ---
@@ -85,6 +117,7 @@ export function AuthProvider({ children }) {
   const value = {
     user,
     session,
+    isAdmin,
     loading,
     isAuthenticated: Boolean(user),
     signIn,

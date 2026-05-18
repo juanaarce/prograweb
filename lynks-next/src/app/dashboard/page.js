@@ -109,17 +109,14 @@ export default function DashboardPage() {
   return (
     <main className="min-h-[70vh] bg-[var(--crema)] px-4 py-16">
       <div className="max-w-3xl mx-auto">
-        <header className="mb-10 text-center">
+        <div className="mb-10 text-center">
           <p className="text-[11px] tracking-[0.25em] uppercase text-[var(--gris-medio)] mb-2">
             Mi cuenta
           </p>
-          <h1
-            className="text-3xl sm:text-4xl tracking-[0.3em]"
-            style={{ fontFamily: "'Times New Roman', serif" }}
-          >
-            {saludo.toUpperCase()}
+          <h1 className="text-2xl sm:text-3xl tracking-[0.3em] font-semibold uppercase">
+            {saludo}
           </h1>
-        </header>
+        </div>
 
         {/* Datos del usuario */}
         <section className="bg-[var(--blanco)] border border-[var(--gris-claro)] p-6 sm:p-10 space-y-6">

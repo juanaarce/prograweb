@@ -5,10 +5,8 @@ import {
   validCategories,
 } from '@/lib/products';
 
-// Pre-genera las rutas estáticas para cada categoría conocida.
-export function generateStaticParams() {
-  return validCategories.map((category) => ({ category }));
-}
+// Sacamos generateStaticParams: ahora la página se renderiza on-demand
+// para que los cambios desde el panel admin se vean al toque.
 
 export async function generateMetadata({ params }) {
   const { category } = await params;
@@ -29,7 +27,7 @@ export default async function CategoryPage({ params }) {
     notFound();
   }
 
-  const productos = getProductsByCategory(category);
+  const productos = await getProductsByCategory(category);
 
   const titulo =
     category === 'novedades'

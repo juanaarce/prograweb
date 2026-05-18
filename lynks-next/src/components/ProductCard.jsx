@@ -15,7 +15,7 @@ export default function ProductCard({ product }) {
   if (!product) return null;
 
   const handleQuickAdd = () => {
-    abrirModalTalle(product.id);
+    abrirModalTalle(product);
   };
 
   return (
