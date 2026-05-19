@@ -46,6 +46,10 @@ export default function ProductForm({ initialProduct }) {
     descripcion: initialProduct?.descripcion || '',
     imagen: initialProduct?.imagen || '',
     categoria: initialProduct?.categoria || 'tops',
+    stock:
+      initialProduct?.stock === undefined || initialProduct?.stock === null
+        ? '10'
+        : String(initialProduct.stock),
     activo:
       initialProduct?.activo === undefined ? true : Boolean(initialProduct.activo),
   });
@@ -71,6 +75,8 @@ export default function ProductForm({ initialProduct }) {
 
     const id = isEdit ? initialProduct.id : slugify(form.id || form.nombre);
     const precio = parsePrecio(form.precio);
+    const stockNum = parseInt(String(form.stock).replace(/\D/g, ''), 10);
+    const stock = Number.isFinite(stockNum) && stockNum >= 0 ? stockNum : -1;
 
     if (!id) return setError('Falta el slug (id) del producto.');
     if (!form.nombre.trim()) return setError('Falta el nombre.');
@@ -78,6 +84,8 @@ export default function ProductForm({ initialProduct }) {
     if (!form.imagen.trim()) return setError('Falta la URL de la imagen.');
     if (!CATEGORIAS.includes(form.categoria))
       return setError('Categoría inválida.');
+    if (stock < 0)
+      return setError('El stock debe ser un número entero ≥ 0.');
 
     setSaving(true);
     try {
@@ -87,6 +95,7 @@ export default function ProductForm({ initialProduct }) {
         descripcion: form.descripcion.trim() || null,
         imagen: form.imagen.trim(),
         categoria: form.categoria,
+        stock,
         activo: form.activo,
       };
 
@@ -191,6 +200,28 @@ export default function ProductForm({ initialProduct }) {
             ? `$${Number(parsePrecio(form.precio)).toLocaleString('es-AR')}`
             : '$0'}
           .
+        </p>
+      </div>
+
+      <div>
+        <label className="admin-label">Stock (unidades disponibles)</label>
+        <input
+          type="number"
+          min="0"
+          step="1"
+          value={form.stock}
+          onChange={handleChange('stock')}
+          placeholder="10"
+          className="admin-input"
+        />
+        <p
+          style={{
+            fontSize: '0.65rem',
+            color: 'var(--gris-medio)',
+            marginTop: '4px',
+          }}
+        >
+          Se descuenta automáticamente cuando un cliente compra el producto.
         </p>
       </div>
 

@@ -18,7 +18,7 @@ export default async function AdminProductsPage() {
   const supabase = await createClient();
   const { data: products, error } = await supabase
     .from('products')
-    .select('id, nombre, precio, categoria, imagen, activo, created_at')
+    .select('id, nombre, precio, categoria, imagen, stock, activo, created_at')
     .order('created_at', { ascending: true });
 
   if (error) {
@@ -71,6 +71,7 @@ export default async function AdminProductsPage() {
               <th>Nombre</th>
               <th>Categoría</th>
               <th>Precio</th>
+              <th>Stock</th>
               <th>Estado</th>
               <th style={{ textAlign: 'right' }}>Acciones</th>
             </tr>
@@ -125,6 +126,21 @@ export default async function AdminProductsPage() {
                 <td>
                   <span
                     style={{
+                      fontWeight: 600,
+                      color:
+                        p.stock === 0
+                          ? '#b91c1c'
+                          : p.stock <= 3
+                          ? '#a16207'
+                          : 'var(--negro)',
+                    }}
+                  >
+                    {p.stock ?? 0}
+                  </span>
+                </td>
+                <td>
+                  <span
+                    style={{
                       fontSize: '0.6rem',
                       letterSpacing: '0.2em',
                       textTransform: 'uppercase',
@@ -158,7 +174,7 @@ export default async function AdminProductsPage() {
             {(!products || products.length === 0) && (
               <tr>
                 <td
-                  colSpan={7}
+                  colSpan={8}
                   style={{
                     textAlign: 'center',
                     padding: '40px',
