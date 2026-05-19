@@ -46,7 +46,7 @@ function mergeCarts(a, b) {
   return Array.from(map.values());
 }
 
-// Convierte una fila de la tabla cart_items al shape interno del carrito.
+// Convierte una fila de la API (shape de cart_items) al shape interno.
 const rowToItem = (r) => ({
   id: r.product_id,
   nombre: r.nombre,
@@ -56,47 +56,35 @@ const rowToItem = (r) => ({
   cantidad: r.cantidad,
 });
 
-// Convierte un item del carrito a una fila para insertar en cart_items.
-const itemToRow = (it, userId) => ({
-  user_id: userId,
-  product_id: String(it.id),
-  nombre: it.nombre,
-  precio: parsePrecio(it.precio),
-  imagen: it.imagen,
-  talle: it.talle,
-  cantidad: it.cantidad,
-});
-
+/**
+ * CartProvider
+ *
+ * Source of truth:
+ *  - Anon user: localStorage (clave `lynks_cart_v1`).
+ *  - Authenticated user: el backend (`/api/carrito`). El estado en memoria
+ *    es una caché para la UI; se sincroniza con cada acción.
+ *
+ * Por qué API routes en vez de tocar Supabase directo: el servidor valida
+ * que el producto exista, esté activo y tenga stock suficiente antes de
+ * permitir agregar al carrito.
+ */
 export function CartProvider({ children }) {
-  const { user, loading: authLoading, supabase } = useAuth();
+  const { user, loading: authLoading } = useAuth();
 
-  // Estado del carrito (siempre array de { id, nombre, precio, imagen, talle, cantidad })
   const [carrito, setCarrito] = useState([]);
-
-  // UI
   const [isCartOpen, setIsCartOpen] = useState(false);
-  // Guardamos el producto entero (no sólo el id) porque el SizeModal corre
-  // en cliente y ya no puede resolver getProductById (que ahora es async y
-  // pega contra Supabase server-side).
   const [sizeModalProduct, setSizeModalProduct] = useState(null);
 
-  // Flags de ciclo de vida
   const [isMounted, setIsMounted] = useState(false);
-  // cartReady = ya terminamos la rehidratación inicial; sólo entonces
-  // empezamos a persistir hacia afuera.
   const [cartReady, setCartReady] = useState(false);
 
-  // ---------------------------------------------------------------
-  // 1) Mount: leemos carrito de localStorage inmediatamente para que
-  //    los usuarios anónimos tengan UX instantánea.
-  // ---------------------------------------------------------------
+  // 1) Mount: leemos carrito de localStorage para UX inmediata.
   useEffect(() => {
     try {
       const data = window.localStorage.getItem(STORAGE_KEY);
       if (data) {
         const parsed = JSON.parse(data);
         if (Array.isArray(parsed)) {
-          // Migración: items viejos sin `cantidad` (duplicados) → agrupar.
           const normalized = parsed.map((it) => ({
             ...it,
             cantidad: Number(it.cantidad) > 0 ? Number(it.cantidad) : 1,
@@ -110,12 +98,7 @@ export function CartProvider({ children }) {
     setIsMounted(true);
   }, []);
 
-  // ---------------------------------------------------------------
-  // 2) Cuando cambia el user (login/logout), rehidratamos:
-  //    - login: traemos el carrito de la DB y, si hay items en
-  //      localStorage, los mergeamos hacia la DB.
-  //    - logout: dejamos sólo lo que haya en localStorage.
-  // ---------------------------------------------------------------
+  // 2) Cuando cambia el user (login/logout), rehidratamos vía API.
   useEffect(() => {
     if (!isMounted || authLoading) return;
 
@@ -124,24 +107,7 @@ export function CartProvider({ children }) {
 
     const rehydrate = async () => {
       if (user) {
-        // Carrito de la DB
-        const { data: rows, error } = await supabase
-          .from('cart_items')
-          .select(
-            'product_id, nombre, precio, talle, imagen, cantidad, created_at'
-          )
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: true });
-
-        if (cancelled) return;
-
-        if (error) {
-          console.error('Error cargando carrito de la DB:', error);
-        }
-
-        const dbCart = (rows || []).map(rowToItem);
-
-        // Items en localStorage (pre-login)
+        // Leer carrito local (pre-login) para mergear
         let localCart = [];
         try {
           const data = window.localStorage.getItem(STORAGE_KEY);
@@ -159,31 +125,47 @@ export function CartProvider({ children }) {
           /* no-op */
         }
 
-        const merged = mergeCarts(dbCart, localCart);
-
-        // Si había items locales, subimos el merged a la DB y limpiamos local.
-        if (localCart.length > 0) {
+        // POST cada item local a la API. La API hace upsert sumando
+        // cantidades y valida stock. Errores se loguean y siguen.
+        for (const it of localCart) {
           try {
-            await supabase
-              .from('cart_items')
-              .delete()
-              .eq('user_id', user.id);
-            if (merged.length > 0) {
-              await supabase
-                .from('cart_items')
-                .insert(merged.map((it) => itemToRow(it, user.id)));
-            }
-            window.localStorage.removeItem(STORAGE_KEY);
-          } catch (err) {
-            console.error('Error mergeando carrito al loguear:', err);
+            await fetch('/api/carrito', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                product_id: it.id,
+                talle: it.talle,
+                cantidad: it.cantidad,
+              }),
+            });
+          } catch (e) {
+            console.warn('Error mergeando item al login:', e);
           }
         }
 
+        if (localCart.length > 0) {
+          try {
+            window.localStorage.removeItem(STORAGE_KEY);
+          } catch {
+            /* no-op */
+          }
+        }
+
+        // GET final del carrito de la DB
+        try {
+          const res = await fetch('/api/carrito');
+          const payload = await res.json().catch(() => ({}));
+          if (cancelled) return;
+          if (res.ok && payload?.success) {
+            setCarrito((payload.data || []).map(rowToItem));
+          }
+        } catch (e) {
+          console.error('Error cargando carrito desde API:', e);
+        }
         if (cancelled) return;
-        setCarrito(merged);
         setCartReady(true);
       } else {
-        // Logout / anónimo: usamos lo que haya en localStorage.
+        // Logout / anon: usamos lo que haya en localStorage.
         let localCart = [];
         try {
           const data = window.localStorage.getItem(STORAGE_KEY);
@@ -210,59 +192,73 @@ export function CartProvider({ children }) {
     return () => {
       cancelled = true;
     };
-  }, [user, isMounted, authLoading, supabase]);
+  }, [user, isMounted, authLoading]);
 
-  // ---------------------------------------------------------------
-  // 3) Persistencia en cada cambio del carrito (solo después de cartReady).
-  //    - Si hay user: DELETE + INSERT del carrito en la DB (debounced 300ms).
-  //    - Si no: localStorage.
-  // ---------------------------------------------------------------
+  // 3) Persistencia local: SOLO para anon users. Si hay user logueado,
+  //    el backend es source of truth y no tocamos localStorage.
   useEffect(() => {
     if (!isMounted || !cartReady) return;
+    if (user) return;
+    try {
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(carrito));
+    } catch (err) {
+      console.warn('No se pudo guardar el carrito en localStorage:', err);
+    }
+  }, [carrito, isMounted, cartReady, user]);
+
+  // ---- Acciones ----
+
+  const agregarAlCarrito = async (producto, talle) => {
+    if (!producto || !talle) return;
 
     if (user) {
-      let cancelled = false;
-      const timer = setTimeout(async () => {
-        if (cancelled) return;
-        try {
-          const { error: delErr } = await supabase
-            .from('cart_items')
-            .delete()
-            .eq('user_id', user.id);
-          if (delErr) {
-            console.error('Error vaciando carrito en DB:', delErr);
-            return;
-          }
-          if (carrito.length > 0) {
-            const { error: insErr } = await supabase
-              .from('cart_items')
-              .insert(carrito.map((it) => itemToRow(it, user.id)));
-            if (insErr) {
-              console.error('Error escribiendo carrito en DB:', insErr);
-            }
-          }
-        } catch (err) {
-          console.error('Error sincronizando carrito:', err);
-        }
-      }, 300);
-      return () => {
-        cancelled = true;
-        clearTimeout(timer);
-      };
-    } else {
       try {
-        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(carrito));
+        const res = await fetch('/api/carrito', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            product_id: producto.id,
+            talle,
+            cantidad: 1,
+          }),
+        });
+        const payload = await res.json().catch(() => ({}));
+        if (!res.ok || !payload?.success) {
+          alert(payload?.error || 'No se pudo agregar al carrito.');
+          return;
+        }
+        const finalCantidad = payload.data.cantidad;
+        setCarrito((prev) => {
+          const idx = prev.findIndex(
+            (it) =>
+              String(it.id) === String(producto.id) && it.talle === talle
+          );
+          if (idx >= 0) {
+            const next = [...prev];
+            next[idx] = { ...next[idx], cantidad: finalCantidad };
+            return next;
+          }
+          return [
+            ...prev,
+            {
+              id: producto.id,
+              nombre: producto.nombre,
+              precio: producto.precio,
+              imagen: producto.imagen,
+              talle,
+              cantidad: finalCantidad,
+            },
+          ];
+        });
+        setIsCartOpen(true);
       } catch (err) {
-        console.warn('No se pudo guardar el carrito en localStorage:', err);
+        console.error('Error agregando al carrito:', err);
+        alert('No se pudo agregar al carrito.');
       }
+      return;
     }
-  }, [carrito, isMounted, cartReady, user, supabase]);
 
-  // --- Acciones del carrito (sólo tocan el estado en memoria; la persistencia
-  //     la maneja el useEffect de arriba). ---
-
-  const agregarAlCarrito = (producto, talle) => {
-    if (!producto || !talle) return;
+    // Anon: actualización local + localStorage (efecto se encarga)
     setCarrito((prev) => {
       const idx = prev.findIndex(
         (it) =>
@@ -289,7 +285,39 @@ export function CartProvider({ children }) {
   };
 
   // "Eliminar" = restar 1 unidad. Si llega a 0, lo saca del carrito.
-  const eliminarDelCarrito = (id, talle) => {
+  const eliminarDelCarrito = async (id, talle) => {
+    if (user) {
+      try {
+        const qs = new URLSearchParams({ product_id: String(id), talle });
+        const res = await fetch(`/api/carrito?${qs.toString()}`, {
+          method: 'DELETE',
+        });
+        const payload = await res.json().catch(() => ({}));
+        if (!res.ok || !payload?.success) {
+          console.warn('Error eliminando:', payload?.error);
+          return;
+        }
+        setCarrito((prev) => {
+          if (payload.data.removed) {
+            return prev.filter(
+              (it) =>
+                !(String(it.id) === String(id) && it.talle === talle)
+            );
+          }
+          const idx = prev.findIndex(
+            (it) => String(it.id) === String(id) && it.talle === talle
+          );
+          if (idx < 0) return prev;
+          const next = [...prev];
+          next[idx] = { ...next[idx], cantidad: payload.data.cantidad };
+          return next;
+        });
+      } catch (err) {
+        console.error('Error eliminando del carrito:', err);
+      }
+      return;
+    }
+
     setCarrito((prev) => {
       const idx = prev.findIndex(
         (it) => String(it.id) === String(id) && it.talle === talle
@@ -305,13 +333,21 @@ export function CartProvider({ children }) {
     });
   };
 
-  const vaciarCarrito = () => setCarrito([]);
+  const vaciarCarrito = async () => {
+    if (user) {
+      try {
+        await fetch('/api/carrito', { method: 'DELETE' });
+      } catch (err) {
+        console.error('Error vaciando carrito:', err);
+      }
+    }
+    setCarrito([]);
+  };
 
   const abrirCarrito = () => setIsCartOpen(true);
   const cerrarCarrito = () => setIsCartOpen(false);
 
-  const abrirModalTalle = (producto) =>
-    setSizeModalProduct(producto);
+  const abrirModalTalle = (producto) => setSizeModalProduct(producto);
   const cerrarModalTalle = () => setSizeModalProduct(null);
 
   // Total numérico (precio * cantidad por cada línea).

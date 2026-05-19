@@ -203,7 +203,7 @@ function AddressForm({ target, value, errors, onChange }) {
 export default function CheckoutPage() {
   const router = useRouter();
   const { carrito, isMounted, vaciarCarrito } = useCart();
-  const { user, loading: authLoading, supabase } = useAuth();
+  const { user, loading: authLoading } = useAuth();
 
   const [shipping, setShipping] = useState(EMPTY_ADDRESS);
   const [billing, setBilling] = useState(EMPTY_ADDRESS);
@@ -344,62 +344,38 @@ export default function CheckoutPage() {
     setLoading(true);
 
     try {
-      // 2) Crear la orden en Supabase
-      const { data: orderRow, error: orderErr } = await supabase
-        .from('orders')
-        .insert({
-          user_id: user.id,
-          subtotal,
-          shipping_cost: envio,
-          total,
-          shipping_method: shippingMethodId,
-          shipping_nombre: shipping.nombre.trim(),
-          shipping_apellido: shipping.apellido.trim(),
-          shipping_email: shipping.email.trim(),
-          shipping_telefono: shipping.telefono.trim() || '',
-          shipping_direccion: shipping.direccion.trim(),
-          shipping_ciudad: shipping.ciudad.trim(),
-          shipping_provincia: shipping.provincia.trim(),
-          shipping_codigo_postal: shipping.codigoPostal.trim(),
-        })
-        .select('id')
-        .single();
+      // 2) Llamar a la API route. Toda la lógica de negocio (validación de
+      //    stock, cálculo de total, inserción de orders + order_items y
+      //    decremento de stock) corre server-side. El cliente sólo manda
+      //    los datos de envío y el método elegido.
+      const res = await fetch('/api/ordenes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          shippingMethod: shippingMethodId,
+          shipping: {
+            nombre: shipping.nombre.trim(),
+            apellido: shipping.apellido.trim(),
+            email: shipping.email.trim(),
+            telefono: shipping.telefono.trim(),
+            direccion: shipping.direccion.trim(),
+            ciudad: shipping.ciudad.trim(),
+            provincia: shipping.provincia.trim(),
+            codigoPostal: shipping.codigoPostal.trim(),
+          },
+        }),
+      });
 
-      if (orderErr || !orderRow) {
-        console.error('Error creando orden:', orderErr);
+      const payload = await res.json().catch(() => ({}));
+      if (!res.ok || !payload?.success) {
         throw new Error(
-          'No pudimos crear tu pedido. Probá de nuevo en un momento.'
+          payload?.error || 'No pudimos crear tu pedido. Probá de nuevo.'
         );
       }
 
-      // 3) Insertar los items (un row por línea agrupada con su cantidad)
-      const itemsPayload = lineas.map((l) => ({
-        order_id: orderRow.id,
-        product_id: String(l.id),
-        nombre: l.nombre,
-        precio: l.precioUnit,
-        talle: l.talle,
-        cantidad: l.cantidad,
-        imagen: l.imagen,
-      }));
-
-      const { error: itemsErr } = await supabase
-        .from('order_items')
-        .insert(itemsPayload);
-
-      if (itemsErr) {
-        console.error('Error insertando items:', itemsErr);
-        // Intentamos rollback manual de la orden — si la borrada falla,
-        // mostramos error de todas formas para que reintenten.
-        await supabase.from('orders').delete().eq('id', orderRow.id);
-        throw new Error(
-          'No pudimos guardar los items del pedido. Probá de nuevo.'
-        );
-      }
-
-      // 4) Vaciar carrito y mandar a la confirmación con el ID del pedido
+      // 3) Vaciar carrito local y mandar a la confirmación
       vaciarCarrito();
-      router.push(`/checkout/success?order_id=${orderRow.id}`);
+      router.push(`/checkout/success?order_id=${payload.data.orderId}`);
     } catch (err) {
       setServerError(err.message || 'Error al procesar la compra.');
       setLoading(false);

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
+import ProfileEditor from './ProfileEditor';
 
 /**
  * Dashboard del usuario.
@@ -34,12 +35,13 @@ const STATUS_LABEL = {
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { user, loading: authLoading, signOut, supabase } = useAuth();
+  const { user, loading: authLoading, signOut } = useAuth();
 
   const [orders, setOrders] = useState([]);
   const [ordersLoading, setOrdersLoading] = useState(true);
   const [ordersError, setOrdersError] = useState('');
   const [expandedId, setExpandedId] = useState(null);
+  const [showEditor, setShowEditor] = useState(false);
 
   // Redirección si no hay sesión.
   useEffect(() => {
@@ -48,7 +50,7 @@ export default function DashboardPage() {
     }
   }, [authLoading, user, router]);
 
-  // Cargar los pedidos del usuario.
+  // Cargar los pedidos del usuario (vía API route — server valida).
   useEffect(() => {
     if (!user) return;
 
@@ -56,33 +58,31 @@ export default function DashboardPage() {
     const fetchOrders = async () => {
       setOrdersLoading(true);
       setOrdersError('');
-      const { data, error } = await supabase
-        .from('orders')
-        .select(
-          'id, total, subtotal, shipping_cost, shipping_method, status, created_at, order_items(id, nombre, precio, talle, cantidad, imagen)'
-        )
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
-
-      if (cancelled) return;
-
-      if (error) {
-        console.error('Error cargando pedidos:', error);
+      try {
+        const res = await fetch('/api/ordenes');
+        const payload = await res.json().catch(() => ({}));
+        if (cancelled) return;
+        if (!res.ok || !payload?.success) {
+          throw new Error(payload?.error || 'Error desconocido');
+        }
+        setOrders(payload.data || []);
+      } catch (err) {
+        if (cancelled) return;
+        console.error('Error cargando pedidos:', err);
         setOrdersError(
           'No pudimos cargar tus pedidos. Recargá la página en un momento.'
         );
         setOrders([]);
-      } else {
-        setOrders(data || []);
+      } finally {
+        if (!cancelled) setOrdersLoading(false);
       }
-      setOrdersLoading(false);
     };
 
     fetchOrders();
     return () => {
       cancelled = true;
     };
-  }, [user, supabase]);
+  }, [user]);
 
   const handleLogout = async () => {
     await signOut();
@@ -151,6 +151,20 @@ export default function DashboardPage() {
             </p>
           </div>
         </section>
+
+        {/* Editar datos del usuario — visible sólo al apretar el botón.
+            La API de Supabase Auth sólo permite modificar al user logueado. */}
+        <div className="mt-6 text-center">
+          <button
+            type="button"
+            onClick={() => setShowEditor((v) => !v)}
+            className="admin-btn-outline"
+          >
+            {showEditor ? 'Ocultar' : 'Modificar mis datos'}
+          </button>
+        </div>
+
+        {showEditor && <ProfileEditor />}
 
         {/* Pedidos */}
         <section className="mt-8 bg-[var(--blanco)] border border-[var(--gris-claro)] p-6 sm:p-10">
