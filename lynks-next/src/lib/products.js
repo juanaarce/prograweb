@@ -25,6 +25,7 @@ function rowToProduct(row) {
     descripcion: row.descripcion || '',
     imagen: row.imagen,
     categoria: row.categoria,
+    stock: Number(row.stock ?? 0),
   };
 }
 
