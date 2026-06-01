@@ -28,6 +28,7 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   // Consulta la tabla profiles para saber si el user es admin.
+  // Acepta dos criterios (Clase 12): legacy `is_admin = true` o `rol = 'admin'`.
   // Se llama después de cada cambio de sesión.
   const fetchIsAdmin = async (uid) => {
     if (!uid) {
@@ -37,14 +38,14 @@ export function AuthProvider({ children }) {
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('is_admin')
+        .select('is_admin, rol')
         .eq('id', uid)
         .maybeSingle();
       if (error) {
         setIsAdmin(false);
         return;
       }
-      setIsAdmin(Boolean(data?.is_admin));
+      setIsAdmin(Boolean(data?.is_admin) || data?.rol === 'admin');
     } catch {
       setIsAdmin(false);
     }

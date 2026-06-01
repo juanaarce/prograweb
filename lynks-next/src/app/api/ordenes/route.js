@@ -1,17 +1,14 @@
 import { getApiUser } from '@/lib/api/auth';
 import { successResponse, errorResponse } from '@/lib/api/responses';
 
-// Costos de envío fijos en el server. No se aceptan del cliente.
-const SHIPPING_COSTS = {
-  standard: 5000,
-  express: 10000,
-  pickup: 0,
-};
+// Métodos de envío válidos. Los costos los conoce SOLO la DB (la RPC
+// crear_orden_completa los calcula del lado server). Acá los listamos
+// nada más para validación rápida de input.
+const SHIPPING_METHODS = new Set(['standard', 'express', 'pickup']);
 
 /**
  * GET /api/ordenes
  * Devuelve las órdenes del usuario logueado (con sus items).
- * Las RLS ya filtran por user_id, pero igual lo encadenamos por claridad.
  */
 export async function GET() {
   try {
@@ -39,21 +36,22 @@ export async function GET() {
  * POST /api/ordenes
  * Body: { shipping: {...}, shippingMethod: 'standard'|'express'|'pickup' }
  *
- * Proceso completo server-side:
- *  1. Autenticar al usuario.
- *  2. Validar datos de envío.
- *  3. Leer el carrito del DB (NO confiar en el cliente).
- *  4. Validar que cada producto siga activo y tenga stock suficiente.
- *  5. Calcular subtotal/total con los precios actuales de DB.
- *  6. Insertar la orden.
- *  7. Insertar order_items con datos de la DB (no del cliente).
- *  8. Decrementar stock vía RPC SECURITY DEFINER.
- *  9. Vaciar el carrito.
- * 10. Retornar 201 con el id de la orden.
+ * Toda la lógica transaccional vive en la stored procedure
+ * `crear_orden_completa` (PL/pgSQL):
+ *  - Valida auth y datos de envío.
+ *  - Lee carrito + productos en una sola transacción.
+ *  - Valida stock y disponibilidad.
+ *  - Calcula subtotal/total server-side (precios reales de DB).
+ *  - Inserta orders + order_items, decrementa stock y vacía cart_items.
+ *  - Si CUALQUIER paso falla, hace ROLLBACK automático y devuelve el error.
+ *
+ * Ventaja vs. la versión anterior: el rollback es atómico. Antes, si fallaba
+ * el decremento de stock después de insertar la orden, el stock quedaba mal.
+ * Ahora PostgreSQL garantiza atomicidad ACID.
  */
 export async function POST(request) {
   try {
-    const { user, supabase, error } = await getApiUser();
+    const { supabase, error } = await getApiUser();
     if (error) return error;
 
     let body;
@@ -65,12 +63,13 @@ export async function POST(request) {
 
     const { shipping, shippingMethod } = body || {};
 
-    // 1) Validar shippingMethod
-    if (!SHIPPING_COSTS.hasOwnProperty(shippingMethod)) {
+    // Validación rápida de input antes de mandar a la DB.
+    if (!SHIPPING_METHODS.has(shippingMethod)) {
       return errorResponse('Método de envío inválido', 400, 'BAD_REQUEST');
     }
-
-    // 2) Validar shipping data (campos obligatorios excepto teléfono)
+    if (!shipping || typeof shipping !== 'object') {
+      return errorResponse('Falta shipping', 400, 'BAD_REQUEST');
+    }
     const required = [
       'nombre',
       'apellido',
@@ -80,9 +79,6 @@ export async function POST(request) {
       'provincia',
       'codigoPostal',
     ];
-    if (!shipping || typeof shipping !== 'object') {
-      return errorResponse('Falta shipping', 400, 'BAD_REQUEST');
-    }
     for (const f of required) {
       if (!shipping[f] || !String(shipping[f]).trim()) {
         return errorResponse(`Falta ${f}`, 400, 'BAD_REQUEST');
@@ -93,135 +89,49 @@ export async function POST(request) {
       return errorResponse('Email inválido', 400, 'BAD_REQUEST');
     }
 
-    // 3) Leer carrito desde DB. No usamos el embed automático de PostgREST
-    //    (`products!inner(...)`) porque `cart_items.product_id` no tiene
-    //    una foreign key declarada hacia `products.id` — así que hacemos
-    //    el "join" a mano: traemos los items y después buscamos los productos.
-    const { data: cartRows, error: cartErr } = await supabase
-      .from('cart_items')
-      .select('product_id, talle, cantidad')
-      .eq('user_id', user.id);
-    if (cartErr) return errorResponse(cartErr.message, 500);
-    if (!cartRows || cartRows.length === 0) {
-      return errorResponse('Carrito vacío', 400, 'EMPTY_CART');
-    }
+    // Llamar a la RPC transaccional. La RPC ya valida auth (auth.uid())
+    // y no le pasamos user_id ni total — todo server-side.
+    const shippingPayload = {
+      nombre: String(shipping.nombre).trim(),
+      apellido: String(shipping.apellido).trim(),
+      email: String(shipping.email).trim(),
+      telefono: String(shipping.telefono || '').trim(),
+      direccion: String(shipping.direccion).trim(),
+      ciudad: String(shipping.ciudad).trim(),
+      provincia: String(shipping.provincia).trim(),
+      codigoPostal: String(shipping.codigoPostal).trim(),
+    };
 
-    const productIds = [...new Set(cartRows.map((r) => r.product_id))];
-    const { data: products, error: prodErr } = await supabase
-      .from('products')
-      .select('id, nombre, precio, imagen, activo, stock')
-      .in('id', productIds);
-    if (prodErr) return errorResponse(prodErr.message, 500);
-
-    const productMap = new Map((products || []).map((p) => [p.id, p]));
-
-    // Adjuntamos los datos del producto a cada línea del carrito.
-    const enrichedCart = cartRows.map((it) => ({
-      ...it,
-      products: productMap.get(it.product_id) || null,
-    }));
-
-    // 4) Validar disponibilidad y stock
-    for (const it of enrichedCart) {
-      const p = it.products;
-      if (!p) {
-        return errorResponse(
-          `Producto inexistente: ${it.product_id}`,
-          400,
-          'UNAVAILABLE'
-        );
+    const { data, error: rpcErr } = await supabase.rpc(
+      'crear_orden_completa',
+      {
+        p_shipping: shippingPayload,
+        p_shipping_method: shippingMethod,
       }
-      if (!p.activo) {
-        return errorResponse(
-          `Producto no disponible: ${p.nombre || it.product_id}`,
-          400,
-          'UNAVAILABLE'
-        );
-      }
-      if (p.stock < it.cantidad) {
-        return errorResponse(
-          `Stock insuficiente para ${p.nombre} (quedan ${p.stock})`,
-          400,
-          'INSUFFICIENT_STOCK'
-        );
-      }
-    }
-
-    // 5) Calcular totales SERVER-SIDE (precios de la DB, no del cliente)
-    const subtotal = enrichedCart.reduce(
-      (acc, it) => acc + Number(it.products.precio) * Number(it.cantidad),
-      0
     );
-    const shippingCost = SHIPPING_COSTS[shippingMethod];
-    const total = subtotal + shippingCost;
 
-    // 6) Insertar la orden
-    const { data: order, error: orderErr } = await supabase
-      .from('orders')
-      .insert({
-        user_id: user.id,
-        subtotal,
-        shipping_cost: shippingCost,
-        total,
-        shipping_method: shippingMethod,
-        shipping_nombre: String(shipping.nombre).trim(),
-        shipping_apellido: String(shipping.apellido).trim(),
-        shipping_email: String(shipping.email).trim(),
-        shipping_telefono: String(shipping.telefono || '').trim(),
-        shipping_direccion: String(shipping.direccion).trim(),
-        shipping_ciudad: String(shipping.ciudad).trim(),
-        shipping_provincia: String(shipping.provincia).trim(),
-        shipping_codigo_postal: String(shipping.codigoPostal).trim(),
-      })
-      .select('id')
-      .single();
-
-    if (orderErr || !order) {
-      console.error('Error insertando orden:', orderErr);
-      return errorResponse('No se pudo crear la orden', 500);
-    }
-
-    // 7) Insertar order_items con datos de la DB
-    const itemsPayload = enrichedCart.map((it) => ({
-      order_id: order.id,
-      product_id: it.product_id,
-      nombre: it.products.nombre,
-      precio: it.products.precio,
-      talle: it.talle,
-      cantidad: it.cantidad,
-      imagen: it.products.imagen,
-    }));
-
-    const { error: itemsErr } = await supabase
-      .from('order_items')
-      .insert(itemsPayload);
-    if (itemsErr) {
-      // Rollback manual de la orden
-      await supabase.from('orders').delete().eq('id', order.id);
-      console.error('Error insertando order_items:', itemsErr);
-      return errorResponse('No se pudieron guardar los items', 500);
-    }
-
-    // 8) Decrementar stock por item (RPC SECURITY DEFINER)
-    for (const it of enrichedCart) {
-      const { error: stockErr } = await supabase.rpc(
-        'decrement_product_stock',
-        { p_product_id: it.product_id, p_qty: it.cantidad }
+    if (rpcErr) {
+      console.error('Error llamando crear_orden_completa:', rpcErr);
+      return errorResponse(
+        rpcErr.message || 'No se pudo crear la orden',
+        500
       );
-      if (stockErr) {
-        // Si falla acá, la orden ya existe — logueamos y seguimos.
-        // En producción esto debería ser una transacción.
-        console.error(
-          `Stock decrement failed for ${it.product_id}:`,
-          stockErr.message
-        );
-      }
     }
 
-    // 9) Vaciar carrito del usuario
-    await supabase.from('cart_items').delete().eq('user_id', user.id);
+    // La RPC devuelve un TABLE de 1 fila: (orden_id, total, success, error_msg)
+    const row = Array.isArray(data) ? data[0] : data;
+    if (!row || row.success === false) {
+      return errorResponse(
+        row?.error_msg || 'No se pudo crear la orden',
+        400,
+        'ORDER_FAILED'
+      );
+    }
 
-    return successResponse({ orderId: order.id, total }, 201);
+    return successResponse(
+      { orderId: row.orden_id, total: row.total },
+      201
+    );
   } catch (err) {
     console.error('[POST /api/ordenes]', err);
     return errorResponse('Error al crear la orden', 500);

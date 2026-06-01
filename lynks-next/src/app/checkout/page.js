@@ -373,9 +373,10 @@ export default function CheckoutPage() {
         );
       }
 
-      // 3) Vaciar carrito local y mandar a la confirmación
+      // 3) Vaciar carrito local y mandar a la página de procesar pago.
+      //    El paso de "success" queda para después del pago real (Semana 13).
       vaciarCarrito();
-      router.push(`/checkout/success?order_id=${payload.data.orderId}`);
+      router.push(`/checkout/pago/${payload.data.orderId}`);
     } catch (err) {
       setServerError(err.message || 'Error al procesar la compra.');
       setLoading(false);

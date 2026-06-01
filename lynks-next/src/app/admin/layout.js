@@ -27,11 +27,13 @@ export default async function AdminLayout({ children }) {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('is_admin')
+    .select('is_admin, rol')
     .eq('id', user.id)
     .maybeSingle();
 
-  if (!profile?.is_admin) {
+  // Admite ambos criterios (Clase 12): is_admin legacy o rol='admin'.
+  const esAdmin = profile?.is_admin === true || profile?.rol === 'admin';
+  if (!esAdmin) {
     redirect('/');
   }
 
