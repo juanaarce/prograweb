@@ -1,9 +1,17 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
+
+// Sólo permitimos returnTo dentro del mismo sitio (paths que empiezan con "/"
+// y no son `//` ni protocolos externos). Esto evita open-redirect.
+function safeReturnTo(value, fallback = '/dashboard') {
+  if (!value || typeof value !== 'string') return fallback;
+  if (!value.startsWith('/') || value.startsWith('//')) return fallback;
+  return value;
+}
 
 /**
  * LoginPage
@@ -33,6 +41,8 @@ function traducirErrorSupabase(err) {
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const returnTo = safeReturnTo(searchParams.get('returnTo'));
   const { signIn } = useAuth();
 
   const [form, setForm] = useState({ email: '', password: '' });
@@ -80,7 +90,7 @@ export default function LoginPage() {
 
     try {
       await signIn(form.email, form.password);
-      router.push('/dashboard');
+      router.push(returnTo);
       router.refresh(); // sincroniza Server Components con la nueva sesión
     } catch (err) {
       setServerError(traducirErrorSupabase(err));
@@ -212,7 +222,11 @@ export default function LoginPage() {
           <p className="text-center text-[12px] tracking-wide text-[var(--gris-oscuro)]">
             ¿No tenés cuenta?{' '}
             <Link
-              href="/register"
+              href={
+                returnTo === '/dashboard'
+                  ? '/register'
+                  : `/register?returnTo=${encodeURIComponent(returnTo)}`
+              }
               className="font-semibold uppercase tracking-[0.15em] text-black border-b border-black hover:text-[var(--gris-medio)] hover:border-[var(--gris-medio)] transition"
             >
               Registrate

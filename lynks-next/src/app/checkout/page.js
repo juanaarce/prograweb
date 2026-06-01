@@ -412,14 +412,19 @@ export default function CheckoutPage() {
             {!authLoading && !user && (
               <div
                 role="alert"
-                className="border border-[var(--gris-claro)] bg-white px-4 py-4 text-[12px] tracking-wide text-[var(--gris-oscuro)] flex flex-col sm:flex-row sm:items-center gap-3 sm:justify-between"
+                className="bg-[var(--blanco)] border border-[var(--gris-claro)] border-l-4 border-l-[var(--amarillo)] p-6 sm:p-8 flex flex-col sm:flex-row sm:items-center gap-5 sm:justify-between"
               >
-                <span>
-                  Necesitás iniciar sesión para finalizar la compra.
-                </span>
+                <div className="space-y-1">
+                  <p className="text-[10px] font-semibold tracking-[0.25em] uppercase text-[var(--gris-medio)]">
+                    Sesión requerida
+                  </p>
+                  <p className="text-sm tracking-wide text-[var(--gris-oscuro)]">
+                    Necesitás iniciar sesión para finalizar tu compra.
+                  </p>
+                </div>
                 <Link
-                  href="/login"
-                  className="inline-block bg-black text-white px-5 py-2 text-[11px] font-bold tracking-[0.2em] uppercase hover:bg-[var(--amarillo)] hover:text-black transition text-center"
+                  href="/login?returnTo=/checkout"
+                  className="inline-block bg-black text-white px-7 py-3 text-[11px] font-bold tracking-[0.2em] uppercase hover:bg-[var(--amarillo)] hover:text-black transition text-center whitespace-nowrap"
                 >
                   Iniciar sesión
                 </Link>

@@ -1,9 +1,15 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
+
+function safeReturnTo(value, fallback = '/dashboard') {
+  if (!value || typeof value !== 'string') return fallback;
+  if (!value.startsWith('/') || value.startsWith('//')) return fallback;
+  return value;
+}
 
 /**
  * RegisterPage
@@ -31,6 +37,8 @@ function traducirErrorSupabase(err) {
 
 export default function RegisterPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const returnTo = safeReturnTo(searchParams.get('returnTo'));
   const { signUp } = useAuth();
 
   const [form, setForm] = useState({
@@ -123,7 +131,7 @@ export default function RegisterPage() {
       }
 
       // Si no hay confirmación de email, ya estás logueado.
-      router.push('/dashboard');
+      router.push(returnTo);
       router.refresh();
     } catch (err) {
       setServerError(traducirErrorSupabase(err));
@@ -171,7 +179,11 @@ export default function RegisterPage() {
             Hacé click en el link para confirmar tu cuenta y poder iniciar sesión.
           </p>
           <Link
-            href="/login"
+            href={
+              returnTo === '/dashboard'
+                ? '/login'
+                : `/login?returnTo=${encodeURIComponent(returnTo)}`
+            }
             className="inline-block bg-black text-white px-8 py-4 text-xs font-bold tracking-[0.2em] uppercase hover:bg-[var(--amarillo)] hover:text-black transition"
           >
             Ir a iniciar sesión
@@ -394,7 +406,11 @@ export default function RegisterPage() {
           <p className="text-center text-[12px] tracking-wide text-[var(--gris-oscuro)]">
             ¿Ya tenés cuenta?{' '}
             <Link
-              href="/login"
+              href={
+                returnTo === '/dashboard'
+                  ? '/login'
+                  : `/login?returnTo=${encodeURIComponent(returnTo)}`
+              }
               className="font-semibold uppercase tracking-[0.15em] text-black border-b border-black hover:text-[var(--gris-medio)] hover:border-[var(--gris-medio)] transition"
             >
               Ingresar

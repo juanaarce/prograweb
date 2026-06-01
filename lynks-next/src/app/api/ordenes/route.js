@@ -93,24 +93,47 @@ export async function POST(request) {
       return errorResponse('Email inválido', 400, 'BAD_REQUEST');
     }
 
-    // 3) Leer carrito desde DB con datos actuales del producto
+    // 3) Leer carrito desde DB. No usamos el embed automático de PostgREST
+    //    (`products!inner(...)`) porque `cart_items.product_id` no tiene
+    //    una foreign key declarada hacia `products.id` — así que hacemos
+    //    el "join" a mano: traemos los items y después buscamos los productos.
     const { data: cartRows, error: cartErr } = await supabase
       .from('cart_items')
-      .select(
-        'product_id, talle, cantidad, products!inner(id, nombre, precio, imagen, activo, stock)'
-      )
+      .select('product_id, talle, cantidad')
       .eq('user_id', user.id);
     if (cartErr) return errorResponse(cartErr.message, 500);
     if (!cartRows || cartRows.length === 0) {
       return errorResponse('Carrito vacío', 400, 'EMPTY_CART');
     }
 
+    const productIds = [...new Set(cartRows.map((r) => r.product_id))];
+    const { data: products, error: prodErr } = await supabase
+      .from('products')
+      .select('id, nombre, precio, imagen, activo, stock')
+      .in('id', productIds);
+    if (prodErr) return errorResponse(prodErr.message, 500);
+
+    const productMap = new Map((products || []).map((p) => [p.id, p]));
+
+    // Adjuntamos los datos del producto a cada línea del carrito.
+    const enrichedCart = cartRows.map((it) => ({
+      ...it,
+      products: productMap.get(it.product_id) || null,
+    }));
+
     // 4) Validar disponibilidad y stock
-    for (const it of cartRows) {
+    for (const it of enrichedCart) {
       const p = it.products;
-      if (!p?.activo) {
+      if (!p) {
         return errorResponse(
-          `Producto no disponible: ${p?.nombre || it.product_id}`,
+          `Producto inexistente: ${it.product_id}`,
+          400,
+          'UNAVAILABLE'
+        );
+      }
+      if (!p.activo) {
+        return errorResponse(
+          `Producto no disponible: ${p.nombre || it.product_id}`,
           400,
           'UNAVAILABLE'
         );
@@ -125,7 +148,7 @@ export async function POST(request) {
     }
 
     // 5) Calcular totales SERVER-SIDE (precios de la DB, no del cliente)
-    const subtotal = cartRows.reduce(
+    const subtotal = enrichedCart.reduce(
       (acc, it) => acc + Number(it.products.precio) * Number(it.cantidad),
       0
     );
@@ -159,7 +182,7 @@ export async function POST(request) {
     }
 
     // 7) Insertar order_items con datos de la DB
-    const itemsPayload = cartRows.map((it) => ({
+    const itemsPayload = enrichedCart.map((it) => ({
       order_id: order.id,
       product_id: it.product_id,
       nombre: it.products.nombre,
@@ -180,7 +203,7 @@ export async function POST(request) {
     }
 
     // 8) Decrementar stock por item (RPC SECURITY DEFINER)
-    for (const it of cartRows) {
+    for (const it of enrichedCart) {
       const { error: stockErr } = await supabase.rpc(
         'decrement_product_stock',
         { p_product_id: it.product_id, p_qty: it.cantidad }
