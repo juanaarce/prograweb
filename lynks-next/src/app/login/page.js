@@ -1,10 +1,6 @@
 'use client';
 
-// Necesario porque la página usa `useSearchParams()` para leer ?returnTo=...
-// Sin esto Next.js intenta pre-renderizarla estática y rompe el build en Vercel.
-export const dynamic = 'force-dynamic';
-
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
@@ -43,7 +39,9 @@ function traducirErrorSupabase(err) {
   return err?.message || 'No pudimos iniciar tu sesión. Probá de nuevo.';
 }
 
-export default function LoginPage() {
+// Componente interno con la lógica del formulario. Necesita estar adentro
+// de un <Suspense> para que useSearchParams() no rompa el build en Vercel.
+function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const returnTo = safeReturnTo(searchParams.get('returnTo'));
@@ -249,5 +247,23 @@ export default function LoginPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+// Export por defecto: envuelve el form en <Suspense> porque LoginForm usa
+// useSearchParams() y Next.js exige boundary para no romper el prerender.
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-[var(--crema)]">
+          <p className="text-[11px] tracking-[0.25em] uppercase text-[var(--gris-medio)]">
+            Cargando…
+          </p>
+        </div>
+      }
+    >
+      <LoginForm />
+    </Suspense>
   );
 }
