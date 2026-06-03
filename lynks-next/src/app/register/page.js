@@ -1,5 +1,9 @@
 'use client';
 
+// Necesario porque la página usa `useSearchParams()` para leer ?returnTo=...
+// Sin esto Next.js intenta pre-renderizarla estática y rompe el build en Vercel.
+export const dynamic = 'force-dynamic';
+
 import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
