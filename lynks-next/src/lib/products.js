@@ -5,6 +5,17 @@
 
 import { createClient } from '@/lib/supabase/server';
 
+// Cuando supabase-js devuelve un error de red, `error.message` suele ser
+// "TypeError: fetch failed" (genérico). La causa real (DNS, timeout, proyecto
+// pausado) vive en `error.cause`. Este helper deja ambas cosas en consola
+// para poder diagnosticar sin tener que adivinar.
+function logSupabaseError(tag, error) {
+  console.error(`[products] ${tag} error:`, error?.message);
+  if (error?.cause) {
+    console.error(`[products] ${tag} cause:`, error.cause);
+  }
+}
+
 /**
  * Formatea un precio entero (en pesos) al formato "$45.000" usado en toda la UI.
  * La función `parsePrecio` del CartContext hace el camino inverso.
@@ -41,7 +52,7 @@ export async function getProductsArray() {
     .order('created_at', { ascending: true });
 
   if (error) {
-    console.error('[products] getProductsArray error:', error.message);
+    logSupabaseError('getProductsArray', error);
     return [];
   }
   return (data || []).map(rowToProduct);
@@ -61,7 +72,7 @@ export async function getProductById(id) {
     .maybeSingle();
 
   if (error) {
-    console.error('[products] getProductById error:', error.message);
+    logSupabaseError('getProductById', error);
     return null;
   }
   if (!data) return null;
@@ -84,7 +95,7 @@ export async function getProductsByCategory(categoria) {
     .order('created_at', { ascending: true });
 
   if (error) {
-    console.error('[products] getProductsByCategory error:', error.message);
+    logSupabaseError('getProductsByCategory', error);
     return [];
   }
   return (data || []).map(rowToProduct);

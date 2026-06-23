@@ -33,7 +33,7 @@ export default async function AdminOrdersPage() {
   const { data: orders, error } = await supabase
     .from('orders')
     .select(
-      'id, created_at, total, status, shipping_nombre, shipping_apellido, shipping_email, order_items(id, cantidad)'
+      'id, created_at, total, status, venta_manual, shipping_nombre, shipping_apellido, shipping_email, order_items(id, cantidad)'
     )
     .order('created_at', { ascending: false });
 
@@ -47,17 +47,30 @@ export default async function AdminOrdersPage() {
 
   return (
     <div style={{ display: 'grid', gap: '24px' }}>
-      <h2
+      <div
         style={{
-          fontSize: '0.75rem',
-          letterSpacing: '0.25em',
-          textTransform: 'uppercase',
-          fontWeight: 600,
-          margin: 0,
+          display: 'flex',
+          flexWrap: 'wrap',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '12px',
         }}
       >
-        Órdenes ({orders?.length ?? 0})
-      </h2>
+        <h2
+          style={{
+            fontSize: '0.75rem',
+            letterSpacing: '0.25em',
+            textTransform: 'uppercase',
+            fontWeight: 600,
+            margin: 0,
+          }}
+        >
+          Órdenes ({orders?.length ?? 0})
+        </h2>
+        <Link href="/admin/orders/new" className="admin-btn">
+          + Nueva orden manual
+        </Link>
+      </div>
 
       <div
         style={{
@@ -98,6 +111,23 @@ export default async function AdminOrdersPage() {
                 <tr key={o.id}>
                   <td style={{ fontFamily: 'monospace', fontSize: '0.7rem' }}>
                     #{shortId}
+                    {o.venta_manual && (
+                      <span
+                        style={{
+                          marginLeft: '6px',
+                          padding: '2px 6px',
+                          fontSize: '0.55rem',
+                          letterSpacing: '0.2em',
+                          textTransform: 'uppercase',
+                          backgroundColor: 'var(--amarillo)',
+                          color: 'var(--negro)',
+                          fontFamily: 'var(--fuente-sans)',
+                          fontWeight: 700,
+                        }}
+                      >
+                        Manual
+                      </span>
+                    )}
                   </td>
                   <td style={{ color: 'var(--gris-oscuro)' }}>{fecha}</td>
                   <td>

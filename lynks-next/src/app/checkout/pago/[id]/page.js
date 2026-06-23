@@ -55,7 +55,6 @@ export default function CheckoutPagoPage() {
   const [error, setError] = useState('');
 
   const [processing, setProcessing] = useState(false);
-  const [preferencia, setPreferencia] = useState(null);
 
   // Redirigir a /login si no hay sesión
   useEffect(() => {
@@ -98,7 +97,6 @@ export default function CheckoutPagoPage() {
   const handlePagar = async () => {
     setProcessing(true);
     setError('');
-    setPreferencia(null);
     try {
       const res = await fetch('/api/pagos/crear-preferencia', {
         method: 'POST',
@@ -111,12 +109,20 @@ export default function CheckoutPagoPage() {
           payload?.error || 'No pudimos iniciar el pago.'
         );
       }
-      setPreferencia(payload.data);
-      // En Semana 13:
-      //   window.location.href = payload.data.paymentLink;
+
+      // initPoint = checkout real de MP. En sandbox MP también devuelve
+      // sandbox_init_point — usamos ese para asegurar que apuntamos al
+      // entorno de prueba si las credenciales son TEST-.
+      const url =
+        payload.data?.sandboxInitPoint || payload.data?.initPoint;
+      if (!url) {
+        throw new Error('Mercado Pago no devolvió URL de pago.');
+      }
+
+      // Redirección al checkout de Mercado Pago.
+      window.location.href = url;
     } catch (err) {
       setError(err.message);
-    } finally {
       setProcessing(false);
     }
   };
@@ -311,8 +317,8 @@ export default function CheckoutPagoPage() {
                 className="admin-btn w-full"
               >
                 {processing
-                  ? 'Procesando…'
-                  : `Pagar ${formatARS(order.total)}`}
+                  ? 'Redirigiendo a Mercado Pago…'
+                  : `Pagar con Mercado Pago — ${formatARS(order.total)}`}
               </button>
             )}
 
@@ -321,18 +327,6 @@ export default function CheckoutPagoPage() {
             </p>
           </aside>
         </div>
-
-        {/* ----------- Estructura preparada (clase 12) ----------- */}
-        {preferencia && (
-          <section className="mt-10 bg-[var(--blanco)] border border-[var(--gris-claro)] border-l-4 border-l-[var(--amarillo)] p-6 sm:p-8 space-y-3">
-            <p className="text-[10px] tracking-[0.25em] uppercase text-[var(--gris-medio)]">
-              Estructura preparada
-            </p>
-            <h3 className="text-sm font-semibold tracking-[0.2em] uppercase">
-              Preferencia para Mercado Pago
-            </h3>
-          </section>
-        )}
 
         {/* ----------- Navegación ----------- */}
         <div className="mt-10 flex justify-center">
