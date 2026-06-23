@@ -4,7 +4,7 @@
 //
 // Documentación del SDK v2: https://github.com/mercadopago/sdk-nodejs
 
-import { MercadoPagoConfig, Preference } from 'mercadopago';
+import { MercadoPagoConfig, Preference, Payment } from 'mercadopago';
 
 const accessToken = process.env.MERCADOPAGO_ACCESS_TOKEN;
 
@@ -20,4 +20,4 @@ const mpClient = new MercadoPagoConfig({
   accessToken: accessToken || 'TEST-placeholder',
 });
 
-export { mpClient, Preference };
+export { mpClient, Preference, Payment };
