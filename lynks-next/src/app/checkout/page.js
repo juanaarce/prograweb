@@ -24,13 +24,13 @@ const SHIPPING_METHODS = [
     id: 'standard',
     label: 'Standard',
     eta: '5–7 días hábiles',
-    price: 5000,
+    price: 50,
   },
   {
     id: 'express',
     label: 'Express',
     eta: '1–2 días hábiles',
-    price: 12000,
+    price: 70,
   },
   {
     id: 'pickup',

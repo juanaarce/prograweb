@@ -110,11 +110,13 @@ export default function CheckoutPagoPage() {
         );
       }
 
-      // initPoint = checkout real de MP. En sandbox MP también devuelve
-      // sandbox_init_point — usamos ese para asegurar que apuntamos al
-      // entorno de prueba si las credenciales son TEST-.
+      // Con las credenciales APP_USR- (las nuevas de MP), el modo sandbox lo
+      // determina el token, no la URL del checkout. El `sandbox_init_point`
+      // (sandbox.mercadopago.com.ar) es legacy y tiene bugs con el simulador
+      // de tarjetas usando APP_USR-; el `init_point` (www.mercadopago.com.ar)
+      // anda bien y sigue siendo de prueba porque las credenciales lo son.
       const url =
-        payload.data?.sandboxInitPoint || payload.data?.initPoint;
+        payload.data?.initPoint || payload.data?.sandboxInitPoint;
       if (!url) {
         throw new Error('Mercado Pago no devolvió URL de pago.');
       }
